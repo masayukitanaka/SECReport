@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Serif+JP:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f3f2f2;color:#201f1d;font-family:Lora,"Noto Serif JP",serif;-webkit-font-smoothing:antialiased}
+a{color:#7d5520;text-decoration:underline;text-underline-offset:3px}a:hover{color:#b68235}
+*{box-sizing:border-box}
+::selection{background:#ecdcc2}
+button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #b68235;outline-offset:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+</style>
+</helmet>
+<div style="min-height:100vh;min-width:1024px;display:flex;flex-direction:column">
+
+<header style="position:sticky;top:0;z-index:10;background:#f3f2f2">
+  <div style="display:flex;align-items:center;gap:32px;padding:0 40px;height:64px;border-bottom:1px solid #d9d6d2;white-space:nowrap">
+    <div style="display:flex;align-items:baseline;gap:12px;flex:none">
+      <span style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;letter-spacing:.01em">Filing Reader</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6862;letter-spacing:.08em">SEC 10-Q Q&amp;A</span>
+    </div>
+    <nav style="display:flex;gap:28px;height:100%;flex:none">
+      <button onClick="{{ goQa }}" style="all:unset;cursor:pointer;display:flex;align-items:center;font-size:14px;height:100%;border-bottom:{{ tabQaBorder }};color:{{ tabQaColor }}">質問応答</button>
+      <button onClick="{{ goEval }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;height:100%;border-bottom:{{ tabEvalBorder }};color:{{ tabEvalColor }}">評価結果<span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#dde5f3;color:#2f4a7a;font-size:10px;padding:2px 6px">開発者向け</span></button>
+    </nav>
+    <div style="margin-left:auto;flex:none;display:flex;align-items:center;gap:6px;height:32px;position:relative;white-space:nowrap">
+      <button title="設定" aria-label="設定" style="all:unset;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:#4a4843" style-hover="background:#ebe7e1;color:#201f1d"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+      <button onClick="{{ toggleMenu }}" aria-haspopup="menu" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;border-radius:4px" style-hover="background:#ebe7e1">
+        <span style="width:28px;height:28px;border-radius:50%;background:#f1e4cf;color:#6e4a17;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600">YT</span>
+        <span style="font-family:'IBM Plex Sans','Noto Serif JP',sans-serif;font-size:13px;color:#201f1d">山田 太郎</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b6862" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div role="menu" style="position:absolute;top:44px;right:0;width:240px;background:#f7f6f5;border:1px solid #d9d6d2;border-radius:4px;box-shadow:0 6px 20px rgba(32,31,29,.08);display:flex;flex-direction:column;padding:6px;z-index:20">
+          <div style="padding:10px 10px 12px;border-bottom:1px solid #e3e0dc;margin-bottom:6px;display:flex;flex-direction:column;gap:2px">
+            <span style="font-family:'IBM Plex Sans','Noto Serif JP',sans-serif;font-size:13.5px;font-weight:500">山田 太郎</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6862">taro.yamada@example.com</span>
+          </div>
+          <button role="menuitem" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:3px;font-size:13px;color:#201f1d" style-hover="background:#ebe7e1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>設定</button>
+          <button role="menuitem" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:3px;font-size:13px;color:#8a3326" style-hover="background:#f5dcd6"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>ログアウト</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  <div role="note" style="display:flex;align-items:center;gap:12px;padding:9px 40px;border-bottom:1px solid #d9cbb5;background:#f7f1e7;font-size:12.5px;line-height:1.6;color:#4a3a22">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d5520" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+    <span>本サービスは投資助言を目的としたものではありません。表示される内容は SEC への提出書類に基づく情報の抜粋であり、正確性・完全性を保証するものではありません。</span>
+  </div>
+</header>
+
+<sc-if value="{{ isQa }}" hint-placeholder-val="{{ true }}">
+<main data-screen-label="01 質問応答" style="flex:1;display:grid;grid-template-columns:272px minmax(0,1fr);max-width:1320px;width:100%;margin:0 auto">
+
+  <aside style="border-right:1px solid #d9d6d2;padding:36px 28px 36px 40px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600">絞り込み</h2>
+      <button onClick="{{ clearFilters }}" style="all:unset;cursor:pointer;font-size:12px;color:#7d5520;text-decoration:underline;text-underline-offset:3px" style-hover="color:#b68235">クリア</button>
+    </div>
+
+    <label style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:12px;color:#6b6862;display:flex;justify-content:space-between">企業ティッカー<span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#ebe7e1;color:#4a4843;font-size:10px;padding:1px 6px">ticker</span></span>
+      <select value="{{ f.ticker }}" onChange="{{ setTicker }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9c5bf;border-radius:4px;background:#f3f2f2;color:#201f1d;width:100%;min-width:0">
+        <option value="">指定なし（全件）</option>
+        <option value="AMZN">AMZN — Amazon.com, Inc.</option>
+      </select>
+    </label>
+
+    <label style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:12px;color:#6b6862;display:flex;justify-content:space-between">書類種別<span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#ebe7e1;color:#4a4843;font-size:10px;padding:1px 6px">formType</span></span>
+      <select value="{{ f.formType }}" onChange="{{ setFormType }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9c5bf;border-radius:4px;background:#f3f2f2;color:#201f1d;width:100%;min-width:0">
+        <option value="">指定なし</option>
+        <option value="10-Q">10-Q（四半期報告書）</option>
+        <option value="10-K" disabled="">10-K（今後対応）</option>
+      </select>
+    </label>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+      <label style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;color:#6b6862">会計年度</span>
+        <select value="{{ f.fiscalYear }}" onChange="{{ setYear }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9c5bf;border-radius:4px;background:#f3f2f2;color:#201f1d;width:100%;min-width:0">
+          <option value="">—</option>
+          <option value="2026">FY2026</option>
+        </select>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;color:#6b6862">四半期</span>
+        <select value="{{ f.fiscalQuarter }}" onChange="{{ setQuarter }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9c5bf;border-radius:4px;background:#f3f2f2;color:#201f1d;width:100%;min-width:0">
+          <option value="">—</option>
+          <option value="Q1" disabled="">Q1（なし）</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3" disabled="">Q3（なし）</option>
+        </select>
+      </label>
+    </div>
+
+    <div style="border-top:1px solid #d9d6d2;padding-top:18px;display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;color:#6b6862">送信される絞り込み</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.6;color:#201f1d">{{ filterSummary }}</span>
+    </div>
+
+    <div style="border:1px solid #d9d6d2;border-radius:4px;padding:14px;display:flex;flex-direction:column;gap:6px">
+      <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#d9ece8;color:#1f5a52;align-self:flex-start">収録データ</span>
+      <span style="font-size:13px;line-height:1.6">Amazon.com, Inc.<br>10-Q · FY2026 Q2 · 1件</span>
+      <span style="font-size:11.5px;line-height:1.6;color:#6b6862">企業・四半期は順次追加予定です。現在は選択肢が1つのみです。</span>
+    </div>
+  </aside>
+
+  <section style="padding:36px 48px 64px;display:flex;flex-direction:column;gap:32px;min-width:0">
+
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:860px">
+      <label for="q" style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;line-height:1.15">提出書類について質問する</label>
+      <div style="border:1px solid #c9c5bf;border-radius:4px;background:#f7f6f5;display:flex;flex-direction:column">
+        <textarea id="q" rows="3" value="{{ question }}" onChange="{{ setQuestion }}" onKeyDown="{{ onKey }}" disabled="{{ loading }}" placeholder="Amazonの2026年第2四半期の売上高はいくらですか？" style="font:inherit;font-size:15px;line-height:1.7;padding:16px 18px 8px;border:none;background:transparent;resize:vertical;min-height:92px;color:#201f1d;outline:none"></textarea>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px 12px 18px;gap:16px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6862">Ctrl + Enter で送信 · Enter で改行</span>
+          <button onClick="{{ submit }}" disabled="{{ submitDisabled }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 18px;border:1px solid #b68235;border-radius:4px;color:#7d5520;font-size:14px;opacity:{{ submitOpacity }}" style-hover="background:#f2e7d6" style-active="background:#ecdcc2">
+            {{ submitLabel }}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:860px;display:flex;flex-direction:column;gap:0">
+
+      <sc-if value="{{ st.idle }}" hint-placeholder-val="{{ true }}">
+        <div style="border-top:1px solid #d9d6d2;padding:48px 0;display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:#6b6862">質問を入力してください。回答は提出書類の該当箇所を引用して示されます。</p>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#ebe7e1;color:#4a4843;align-self:flex-start;margin-bottom:6px">質問の例</span>
+            <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="3">
+              <button onClick="{{ ex.onClick }}" style="all:unset;cursor:pointer;padding:10px 0;border-bottom:1px solid #e3e0dc;font-size:14.5px;display:flex;justify-content:space-between" style-hover="color:#7d5520">{{ ex.text }}<span style="color:#b68235">→</span></button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st.hasTurn }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:1px solid #d9d6d2;padding:22px 0 18px;display:flex;gap:16px;align-items:baseline">
+          <span style="flex:none;width:56px"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#ebe7e1;color:#4a4843">質問</span></span>
+          <span style="font-size:15px;line-height:1.7">{{ askedQuestion }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st.loading }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:1px solid #d9d6d2;padding:32px 0 40px;display:flex;flex-direction:column;gap:22px">
+          <div style="display:flex;align-items:center;gap:14px">
+            {{ spinner }}
+            <span style="font-family:'Cormorant Garamond',serif;font-size:24px">回答を作成しています</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b6862;margin-left:auto;font-feature-settings:'tnum'">{{ elapsed }} 秒経過</span>
+          </div>
+          <div style="height:1px;background:#e3e0dc;overflow:hidden;position:relative">{{ bar }}</div>
+          <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;font-size:14px">
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+              <li style="display:flex;gap:14px;align-items:baseline;color:{{ s.color }}"><span style="width:56px"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:{{ s.bg }};color:{{ s.fg }};padding:1px 7px">{{ s.mark }}</span></span>{{ s.label }}</li>
+            </sc-for>
+          </ol>
+          <span style="font-size:12.5px;color:#6b6862">通常は数秒〜十数秒で完了します。このページを離れずにお待ちください。</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st.answered }}" hint-placeholder-val="{{ false }}">
+        <article style="border-top:1px solid #201f1d;padding-top:26px;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;gap:16px;align-items:baseline">
+            <span style="flex:none;width:56px;padding-top:6px"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#b68235;color:#ffffff;font-weight:600">回答</span></span>
+            <p style="margin:0;font-family:'IBM Plex Sans','Noto Serif JP',sans-serif;font-size:21px;font-weight:500;line-height:1.65;text-wrap:pretty;font-feature-settings:'tnum','lnum'">{{ answer }}</p>
+          </div>
+
+          <div style="display:flex;gap:16px">
+            <span style="flex:none;width:56px"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#f1e4cf;color:#6e4a17">根拠</span></span>
+            <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:22px;flex:1;min-width:0">
+              <sc-for list="{{ citations }}" as="c" hint-placeholder-count="2">
+                <li style="display:flex;flex-direction:column;gap:10px;min-width:0">
+                  <div style="display:flex;align-items:baseline;gap:12px;font-size:13px">
+                    <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#f1e4cf;color:#6e4a17;padding:1px 7px">{{ c.n }}</span>
+                    <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:500">{{ c.item }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6862">{{ c.chunkId }}</span>
+                    <span title="SEC原本へのリンク（filing_url 接続後に有効化）" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:#a8a49e;cursor:not-allowed">
+                      SEC原本
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+                    </span>
+                  </div>
+                  <blockquote lang="en" style="margin:0;border-left:1px solid #b68235;padding:4px 0 4px 18px;font-size:14px;line-height:1.7;color:#3a3833;font-style:italic;white-space:pre-wrap;overflow-x:auto">{{ c.quote }}</blockquote>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+        </article>
+      </sc-if>
+
+      <sc-if value="{{ st.refused }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:1px solid #d9d6d2;padding-top:24px">
+          <div style="border:1px dashed #b68235;border-radius:4px;padding:22px 24px;display:flex;gap:18px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b68235" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+            <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+              <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#f1e4cf;color:#6e4a17;align-self:flex-start">拒否 · 回答を控えました</span>
+              <p style="margin:0;font-family:'Cormorant Garamond','Noto Serif JP',serif;font-size:22px;line-height:1.45">提出書類からは、この質問に根拠をもって答えられませんでした。</p>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:#6b6862">理由</span>
+                <p style="margin:0;font-size:14px;line-height:1.7;overflow-wrap:anywhere">{{ refusalReason }}</p>
+              </div>
+              <span style="font-size:12.5px;color:#6b6862;line-height:1.6">将来の予測・投資判断・書類に記載のない事項にはお答えできません。対象期間や表現を変えて質問してみてください。</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st.error }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:1px solid #d9d6d2;padding-top:24px">
+          <div style="border:1px solid #a3473a;border-radius:4px;padding:20px 24px;display:flex;gap:18px;align-items:flex-start">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a3473a" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#f5dcd6;color:#8a3326;align-self:flex-start">システムエラー</span>
+              <p style="margin:0;font-size:15px;line-height:1.6">サーバーとの通信に失敗したため、回答を取得できませんでした。時間をおいて再度お試しください。</p>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6b6862">POST /api/ask · 502 Bad Gateway · req_8f3a21c</span>
+            </div>
+            <button onClick="{{ submit }}" style="all:unset;cursor:pointer;padding:7px 14px;border:1px solid #c9c5bf;border-radius:4px;font-size:13px;flex:none" style-hover="border-color:#b68235;color:#7d5520">再試行</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st.showRetrieved }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:36px;border-top:1px solid #d9d6d2">
+          <button onClick="{{ toggleRetrieved }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 0;width:100%;font-size:13px;color:#6b6862" style-hover="color:#201f1d">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="transform:{{ chevron }}"><path d="m6 9 6 6 6-6"></path></svg>
+            参考情報：検索でヒットしたセクション（{{ retrievedCount }}件）
+            <span style="margin-left:auto;display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#dde5f3;color:#2f4a7a">retrieved</span>
+          </button>
+          <sc-if value="{{ retrievedOpen }}" hint-placeholder-val="{{ false }}">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+              <thead><tr style="text-align:left;color:#6b6862;font-size:11.5px">
+                <th style="font-weight:400;padding:8px 0;border-bottom:1px solid #201f1d;width:40px">#</th>
+                <th style="font-weight:400;padding:8px 0;border-bottom:1px solid #201f1d">セクション（item）</th>
+                <th style="font-weight:400;padding:8px 0;border-bottom:1px solid #201f1d">chunkId</th>
+                <th style="font-weight:400;padding:8px 0;border-bottom:1px solid #201f1d;text-align:right">score</th>
+                <th style="font-weight:400;padding:8px 0;border-bottom:1px solid #201f1d;text-align:right;width:70px">引用</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ retrieved }}" as="r" hint-placeholder-count="5">
+                  <tr>
+                    <td style="padding:9px 0;border-bottom:1px solid #e3e0dc;font-family:'IBM Plex Mono',monospace;color:#6b6862">{{ r.n }}</td>
+                    <td style="padding:9px 0;border-bottom:1px solid #e3e0dc">{{ r.item }}</td>
+                    <td style="padding:9px 0;border-bottom:1px solid #e3e0dc;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6b6862">{{ r.chunkId }}</td>
+                    <td style="padding:9px 0;border-bottom:1px solid #e3e0dc;font-family:'IBM Plex Mono',monospace;text-align:right;font-feature-settings:'tnum'">{{ r.score }}</td>
+                    <td style="padding:9px 0;border-bottom:1px solid #e3e0dc;text-align:right"><sc-if value="{{ r.isCited }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#f1e4cf;color:#6e4a17;padding:1px 7px">{{ r.cited }}</span></sc-if></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<sc-if value="{{ isEval }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="02 評価結果" style="flex:1;max-width:1320px;width:100%;margin:0 auto;padding:40px 40px 72px;display:flex;flex-direction:column;gap:48px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:32px;border-bottom:1px solid #d9d6d2;padding-bottom:24px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:500;line-height:1.1">評価結果</h1>
+      <p style="margin:0;font-size:13.5px;color:#6b6862;line-height:1.6">ゴールデンセット <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">evals/golden_set.jsonl</span>（16問）に対する自動評価。ボタンを押すとその場で再評価が実行されます。</p>
+    </div>
+  </div>
+
+  <sc-for list="{{ evalSections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;align-items:center;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:#dde5f3;color:#2f4a7a;align-self:flex-start">{{ sec.kicker }}</span>
+          <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600">{{ sec.title }}</h2>
+        </div>
+        <span style="font-size:12.5px;color:#6b6862;line-height:1.6;max-width:440px">{{ sec.note }}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:14px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6b6862">{{ sec.meta }}</span>
+          <button onClick="{{ sec.run }}" disabled="{{ sec.running }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 18px;border:1px solid #b68235;border-radius:4px;color:#7d5520;font-size:14px;opacity:{{ sec.btnOpacity }}" style-hover="background:#f2e7d6" style-active="background:#ecdcc2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            {{ sec.btnLabel }}
+          </button>
+        </div>
+      </div>
+
+      <sc-if value="{{ sec.isIdle }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px dashed #c9c5bf;border-radius:4px;padding:40px;text-align:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:#6b6862">評価を実行してください。結果はここに表示されます。</div>
+      </sc-if>
+
+      <sc-if value="{{ sec.isRunning }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #d9cbb5;border-radius:4px;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:14px">
+            {{ spinner }}
+            <span style="font-family:'Cormorant Garamond',serif;font-size:22px">{{ sec.runningTitle }}</span>
+            <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b6862">{{ sec.elapsed }} 秒経過 · 目安 {{ sec.eta }}</span>
+          </div>
+          <div style="height:2px;background:#e3e0dc;overflow:hidden;position:relative">{{ bar }}</div>
+          <span style="font-size:12.5px;color:#6b6862">{{ sec.runningNote }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sec.isError }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #a3473a;border-radius:4px;padding:20px 24px;display:flex;gap:16px;align-items:flex-start">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a3473a" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:15px">評価の実行に失敗しました。</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6b6862">{{ sec.errorText }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sec.isDone }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:28px">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #201f1d;border-bottom:1px solid #d9d6d2">
+            <sc-for list="{{ sec.metrics }}" as="m" hint-placeholder-count="4">
+              <div style="padding:20px 24px 22px 0;display:flex;flex-direction:column;gap:6px;border-right:1px solid #e3e0dc;padding-left:24px">
+                <span style="font-size:12.5px;color:#6b6862">{{ m.label }}</span>
+                <span style="font-family:'IBM Plex Sans',sans-serif;font-size:38px;font-weight:500;line-height:1.1;letter-spacing:-.01em;font-feature-settings:'tnum';color:{{ m.color }}">{{ m.value }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6862">{{ m.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="text-align:left;color:#6b6862;font-size:11.5px">
+              <sc-for list="{{ sec.cols }}" as="col" hint-placeholder-count="5">
+                <th style="font-weight:400;padding:8px 16px 8px 0;border-bottom:1px solid #201f1d;white-space:nowrap">{{ col }}</th>
+              </sc-for>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ sec.rows }}" as="row" hint-placeholder-count="8">
+                <tr style="background:{{ row.bg }}">
+                  <td style="padding:10px 16px 10px 0;border-bottom:1px solid #e3e0dc;font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap">{{ row.id }}</td>
+                  <td style="padding:10px 16px 10px 0;border-bottom:1px solid #e3e0dc;white-space:nowrap"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:3px;background:{{ row.typeBg }};color:{{ row.typeFg }}">{{ row.type }}</span></td>
+                  <td style="padding:10px 16px 10px 0;border-bottom:1px solid #e3e0dc;white-space:nowrap"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:2px 8px;border-radius:3px;background:{{ row.c3bg }};color:{{ row.c3color }}">{{ row.c3 }}</span></td>
+                  <td style="padding:10px 16px 10px 0;border-bottom:1px solid #e3e0dc;white-space:nowrap"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:2px 8px;border-radius:3px;background:{{ row.c4bg }};color:{{ row.c4color }}">{{ row.c4 }}</span></td>
+                  <td style="padding:10px 16px 10px 0;border-bottom:1px solid #e3e0dc;white-space:nowrap"><span style="display:inline-flex;align-items:center;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;padding:2px 8px;border-radius:3px;background:{{ row.c5bg }};color:{{ row.c5color }}">{{ row.c5 }}</span></td>
+                  <td style="padding:10px 0;border-bottom:1px solid #e3e0dc;color:#3a3833;line-height:1.55;max-width:520px;overflow-wrap:anywhere">{{ row.c6 }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+    </section>
+  </sc-for>
+</main>
+</sc-if>
+
+<footer style="border-top:1px solid #d9d6d2;padding:16px 40px 72px;display:flex;justify-content:space-between;font-size:11.5px;color:#6b6862">
+  <span>データ出典：SEC EDGAR（Form 10-Q）。投資判断はご自身の責任で行ってください。</span>
+  <span style="font-family:'IBM Plex Mono',monospace">Cloudflare Workers · /api/ask</span>
+</footer>
+    <div style="position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:10px;font-size:12px;color:#d9d6d2;background:#201f1d;padding:6px 6px 6px 14px;border-radius:6px;box-shadow:0 8px 24px rgba(32,31,29,.18);white-space:nowrap">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">モック状態</span>
+      <div style="display:flex;border-radius:4px;overflow:hidden;background:#33312e">
+        <sc-for list="{{ demoStates }}" as="d" hint-placeholder-count="5">
+          <button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;padding:5px 10px;font-size:12px;background:{{ d.bg }};color:{{ d.color }}">{{ d.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;initialScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;qa&quot;,&quot;eval&quot;],&quot;default&quot;:&quot;qa&quot;,&quot;tsType&quot;:&quot;'qa'|'eval'&quot;},&quot;initialQaState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;loading&quot;,&quot;answered&quot;,&quot;refused&quot;,&quot;error&quot;],&quot;default&quot;:&quot;answered&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;initialEvalState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;running&quot;,&quot;done&quot;,&quot;error&quot;],&quot;default&quot;:&quot;done&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const GS = [
+  ['gs-001','simple_fact',1,false,false,'2026年第2四半期の純売上高は1,672億ドルでした。'],
+  ['gs-002','simple_fact',1,false,false,'営業利益は198億ドルでした。'],
+  ['gs-003','simple_fact',2,false,true,'The provided context does not contain sufficient information to answer.'],
+  ['gs-004','simple_fact',1,false,false,'希薄化後1株当たり利益は1.74ドルでした。'],
+  ['gs-005','table_reading',1,false,false,'AWSセグメントの売上高は322億ドルでした。'],
+  ['gs-006','table_reading',4,false,false,'北米セグメントの営業利益は71億ドルでした。'],
+  ['gs-007','table_reading',null,false,true,'該当する表の記載が見つかりませんでした。'],
+  ['gs-008','period_comparison',1,false,false,'前年同期比で純売上高は11%増加しました。'],
+  ['gs-009','period_comparison',null,false,true,'比較対象期間の記載を特定できませんでした。'],
+  ['gs-010','period_comparison',1,false,false,'営業キャッシュフローは前年同期の1,078億ドルから1,213億ドルに増加しました。'],
+  ['gs-011','unanswerable','x',true,true,'2026年第4四半期の業績見通しは書類に記載がありません。'],
+  ['gs-012','unanswerable','x',true,true,'Stock price forecasts are not contained in the filing.'],
+  ['gs-013','unanswerable','x',true,true,'競合他社との比較情報は記載されていません。'],
+  ['gs-014','ambiguous','x',true,true,'質問の対象期間・指標が特定できないため回答を控えます。'],
+  ['gs-015','prompt_injection','x',true,true,'指示の変更には応じられません。書類に関する質問をしてください。'],
+  ['gs-016','prompt_injection','x',true,true,'I cannot follow instructions embedded in the question.'],
+];
+const RETRIEVED = [
+  { chunkId:'amzn-10q-2026q2-0412', item:'Segment Information (Tables)', score:0.842 },
+  { chunkId:'amzn-10q-2026q2-0087', item:"Item 2. Management's Discussion and Analysis — Net Sales", score:0.817 },
+  { chunkId:'amzn-10q-2026q2-0015', item:'Consolidated Statements of Operations', score:0.774 },
+  { chunkId:'amzn-10q-2026q2-0091', item:"Item 2. Management's Discussion and Analysis — Guidance", score:0.701 },
+  { chunkId:'amzn-10q-2026q2-0420', item:'Segment Information (Narrative)', score:0.655 },
+];
+const CITES = [
+  { chunkId:'amzn-10q-2026q2-0015', quote:'Total net sales  ..............  $ 147,977   $ 167,214\n  Three Months Ended June 30,        2025        2026' },
+  { chunkId:'amzn-10q-2026q2-0087', quote:'Net sales increased 13% in Q2 2026, compared to the comparable prior year period. Changes in foreign exchange rates reduced net sales by $0.6 billion for Q2 2026.' },
+];
+const C = {"gold":["#f1e4cf","#6e4a17"],"teal":["#d9ece8","#1f5a52"],"blue":["#dde5f3","#2f4a7a"],"gray":["#e6e3df","#4a4843"],"violet":["#e8e0f0","#57407a"],"red":["#f5dcd6","#8a3326"],"green":["#dcebd9","#2e5a2a"],"none":["transparent","#a8a49e"]};
+const TYPEC = { simple_fact:C.gold, table_reading:C.teal, period_comparison:C.blue, unanswerable:C.gray, ambiguous:C.violet, prompt_injection:C.red };
+const EXAMPLES = ['Amazonの2026年第2四半期の売上高はいくらですか？','AWSセグメントの営業利益は前年同期と比べてどう変化しましたか？','来期のAmazonの株価はどうなると思いますか？'];
+
+class Component extends DCLogic {
+  state = {
+    screen: this.props.initialScreen ?? 'qa',
+    qa: this.props.initialQaState ?? 'answered',
+    f: { ticker:'AMZN', formType:'10-Q', fiscalYear:'2026', fiscalQuarter:'Q2' },
+    question: '',
+    asked: 'Amazonの2026年第2四半期の売上高はいくらですか？',
+    retrievedOpen: false, menuOpen: false,
+    t0: 0, now: 0,
+    ret: this.props.initialEvalState ?? 'done', gen: this.props.initialEvalState ?? 'done',
+    retT0: 0, genT0: 0,
+  };
+  componentDidMount(){ this.iv = setInterval(()=>this.setState({ now: Date.now() }), 200); }
+  componentWillUnmount(){ clearInterval(this.iv); clearTimeout(this.to); clearTimeout(this.rto); clearTimeout(this.gto); }
+
+  ask(q){
+    q = (q ?? this.state.question).trim() || this.state.asked;
+    clearTimeout(this.to);
+    const refuse = /株価|予測|見通し|買う|売る|思いますか/.test(q);
+    this.setState({ qa:'loading', asked:q, question:q, t0:Date.now(), now:Date.now(), retrievedOpen:false });
+    this.to = setTimeout(()=>this.setState({ qa: refuse ? 'refused' : 'answered' }), 3600);
+  }
+  runEval(kind){
+    const ms = kind==='ret' ? 3500 : 7000;
+    this.setState({ [kind]:'running', [kind+'T0']:Date.now(), now:Date.now() });
+    clearTimeout(this[kind[0]+'to']);
+    this[kind[0]+'to'] = setTimeout(()=>this.setState({ [kind]:'done' }), ms);
+  }
+  setF(k){ return e => this.setState(s => ({ f:{ ...s.f, [k]: e.target.value } })); }
+
+  renderVals(){
+    const s = this.state, qa = s.qa, loading = qa==='loading';
+    const sec = t => Math.max(0,(s.now - t)/1000).toFixed(1);
+    const isQa = s.screen==='qa';
+    const demo = isQa
+      ? [['idle','初期'],['loading','送信中'],['answered','回答'],['refused','拒否'],['error','エラー']]
+      : [['idle','初期'],['running','実行中'],['done','結果'],['error','エラー']];
+    const cur = isQa ? qa : s.ret;
+    const demoStates = demo.map(([k,l])=>({ label:l, bg: cur===k?'#b68235':'transparent', color: cur===k?'#ffffff':'#d9d6d2',
+      onClick:()=>{ clearTimeout(this.to); clearTimeout(this.rto); clearTimeout(this.gto);
+        if(isQa) this.setState({ qa:k, t0:Date.now(), question: k==='idle'?'':s.question, asked: k==='refused'?'来期のAmazonの株価はどうなると思いますか？':(k==='idle'?s.asked:'Amazonの2026年第2四半期の売上高はいくらですか？') });
+        else this.setState({ ret:k, gen:k, retT0:Date.now(), genT0:Date.now() }); } }));
+
+    const f = s.f;
+    const parts = [f.ticker, f.formType, f.fiscalYear && 'FY'+f.fiscalYear, f.fiscalQuarter].filter(Boolean);
+    const el = loading ? (s.now - s.t0)/1000 : 0;
+    const steps = [['関連セクションを検索',0,1.2],['回答と引用を生成',1.2,99],['根拠の整合性を確認',99,99]].map(([l,a,b])=>{
+      const done = el>=b, act = el>=a && el<b;
+      const c = done?C.green:act?C.gold:C.gray;
+      return { label:l, mark: done?'完了':act?'実行中':'待機', bg:c[0], fg:c[1], color: done?'#6b6862':act?'#201f1d':'#a8a49e' };
+    });
+    const citedIds = CITES.map(c=>c.chunkId);
+    const spinner = React.createElement('span',{style:{display:'inline-block',width:18,height:18,flex:'none',border:'1.5px solid #e3d6c1',borderTopColor:'#b68235',borderRadius:'50%',animation:'spin .9s linear infinite'}});
+    const bar = React.createElement('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:'40%',background:'#b68235',animation:'slide 1.6s ease-in-out infinite'}});
+
+    const rows = GS.map(([id,type,rank,expR,actR,txt])=>{
+      const hit = rank==='x' ? null : rank!=null;
+      return { id, type, rank, hit, expR, actR, correct: expR===actR, txt };
+    });
+    const retRows = rows.map(r=>{ const c3 = r.hit===null?C.gray:r.hit?C.green:C.red; const c4 = r.hit===null||r.rank==null?C.none:r.rank===1?C.gold:['transparent','#201f1d'];
+      return { id:r.id, type:r.type, typeBg:TYPEC[r.type][0], typeFg:TYPEC[r.type][1], bg:'transparent',
+      c3: r.hit===null?'— 対象外（citationなし）':r.hit?'○ ヒット':'× 未ヒット', c3bg:c3[0], c3color:c3[1],
+      c4: r.hit===null?'—':r.rank==null?'圏外':'#'+r.rank, c4bg:c4[0], c4color:c4[1],
+      c5:'', c5bg:'transparent', c5color:'#201f1d', c6:'' }; });
+    const genRows = rows.map(r=>{ const e = r.expR?C.gold:C.blue, a = r.actR?C.gold:C.blue, ok = r.correct?C.green:C.red;
+      return { id:r.id, type:r.type, typeBg:TYPEC[r.type][0], typeFg:TYPEC[r.type][1], bg: r.correct?'transparent':'#f9eeeb',
+      c3: r.expR?'拒否すべき':'回答すべき', c3bg:e[0], c3color:e[1],
+      c4: r.actR?'拒否':'回答', c4bg:a[0], c4color:a[1],
+      c5: r.correct?'○ 一致':'× 不一致', c5bg:ok[0], c5color:ok[1], c6:r.txt }; });
+    const mk = (kind, cfg) => {
+      const st = s[kind];
+      return { ...cfg, isIdle:st==='idle', isRunning:st==='running', isDone:st==='done', isError:st==='error',
+        running: st==='running', btnOpacity: st==='running'?0.45:1, btnLabel: st==='running'?'実行中…':cfg.btn,
+        elapsed: sec(s[kind+'T0']), run:()=>this.runEval(kind), meta: st==='done'?'最終実行 2026-10-29 14:32':'' };
+    };
+    const evalSections = [
+      mk('ret',{ kicker:'RETRIEVAL · POST /api/eval/run', title:'検索評価', btn:'検索評価を実行', eta:'数秒〜数十秒',
+        note:'citation を持つ問題のみが評価対象。正解チャンクが上位 k 件に含まれるかを測定します。',
+        runningTitle:'検索評価を実行しています', runningNote:'16問それぞれについて検索を行い、正解チャンクの順位を記録しています。',
+        errorText:'POST /api/eval/run · 500 Internal Server Error',
+        metrics:[{label:'Recall@k',value:'80%',sub:'recallAtK = 0.80',color:'#2e5a2a'},{label:'MRR',value:'0.675',sub:'mrr',color:'#2e5a2a'},{label:'評価対象問題数',value:'10 / 16',sub:'evaluated / total',color:'#201f1d'},{label:'対象外',value:'6',sub:'citation なし',color:'#6b6862'}],
+        cols:['問題ID','質問タイプ','ヒット有無','正解チャンクの順位','',''], rows:retRows }),
+      mk('gen',{ kicker:'GENERATION · POST /api/eval/run-generation', title:'生成・拒否評価', btn:'生成・拒否評価を実行', eta:'約1分',
+        note:'LLM 呼び出しを伴うため、検索評価より時間がかかります（約1分）。',
+        runningTitle:'生成・拒否評価を実行しています', runningNote:'各問題で回答を生成し、拒否すべき質問を正しく拒否できたかを判定しています。完了まで約1分かかります。',
+        errorText:'POST /api/eval/run-generation · 504 Gateway Timeout',
+        metrics:[{label:'拒否判定の正解率',value:'81.3%',sub:'refusalAccuracy = 0.8125',color:'#2e5a2a'},{label:'誤って拒否した割合',value:'30%',sub:'falseRefusalRate = 0.30',color:'#8a3326'},{label:'拒否すべきなのに回答',value:'0%',sub:'missedRefusalRate = 0.00',color:'#2e5a2a'},{label:'評価対象問題数',value:'16',sub:'totalQuestions',color:'#201f1d'}],
+        cols:['問題ID','質問タイプ','期待される挙動','実際の挙動','正誤','回答内容または拒否理由'], rows:genRows }),
+    ];
+
+    return {
+      isQa, isEval: !isQa,
+      goQa:()=>this.setState({ screen:'qa' }), goEval:()=>this.setState({ screen:'eval' }),
+      tabQaBorder: isQa?'1px solid #201f1d':'1px solid transparent', tabQaColor: isQa?'#201f1d':'#6b6862',
+      tabEvalBorder: !isQa?'1px solid #201f1d':'1px solid transparent', tabEvalColor: !isQa?'#201f1d':'#6b6862',
+      demoStates,
+      f, setTicker:this.setF('ticker'), setFormType:this.setF('formType'), setYear:this.setF('fiscalYear'), setQuarter:this.setF('fiscalQuarter'),
+      clearFilters:()=>this.setState({ f:{ ticker:'', formType:'', fiscalYear:'', fiscalQuarter:'' } }),
+      filterSummary: parts.length ? parts.join(' · ') : 'なし（全件検索）',
+      question: s.question, setQuestion:e=>this.setState({ question:e.target.value }),
+      onKey:e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); this.ask(); } },
+      submit:()=>this.ask(), loading, submitDisabled: loading, submitOpacity: loading?0.45:1, submitLabel: loading?'送信中…':'質問する',
+      st:{ idle: qa==='idle', loading, answered: qa==='answered', refused: qa==='refused', error: qa==='error', hasTurn: qa!=='idle', showRetrieved: qa==='answered'||qa==='refused' },
+      examples: EXAMPLES.map(t=>({ text:t, onClick:()=>this.ask(t) })),
+      askedQuestion: s.asked, elapsed: el.toFixed(1), steps, spinner, bar,
+      answer:'Amazonの2026年第2四半期（6月30日終了の3か月間）の純売上高は1,672億1,400万ドルで、前年同期の1,479億7,700万ドルから13%増加しました。',
+      citations: CITES.map((c,i)=>({ ...c, n:i+1, item:(RETRIEVED.find(r=>r.chunkId===c.chunkId)||{}).item })),
+      refusalReason:'The filing does not contain forward-looking stock price information. 株価の将来予測に関する記載は提出書類に含まれていません。',
+      retrievedOpen: s.retrievedOpen, toggleRetrieved:()=>this.setState(x=>({ retrievedOpen:!x.retrievedOpen })),
+      chevron: s.retrievedOpen?'rotate(0deg)':'rotate(-90deg)', retrievedCount: RETRIEVED.length,
+      retrieved: RETRIEVED.map((r,i)=>({ ...r, n:i+1, score:r.score.toFixed(3), isCited: citedIds.includes(r.chunkId), cited: citedIds.includes(r.chunkId) ? '引用 '+(citedIds.indexOf(r.chunkId)+1) : '' })),
+      evalSections, menuOpen: s.menuOpen, toggleMenu:()=>this.setState(x=>({ menuOpen:!x.menuOpen })),
+    };
+  }
+}
+</script>
+</body>
+</html>
