@@ -37,7 +37,7 @@
 
 ## 既知の制約
 
-- `source.accession_number` と `source.filing_url` は現時点で `"PLACEHOLDER"` としている。サンプル HTML には正規の SEC EDGAR URL ではなく CloudFront 経由のキャッシュ URL しか含まれておらず、実際のアクセッション番号・原本 URL は EDGAR Fetcher 実装後に実データ取得で確定させる。索引化・検索評価には `ticker`/`form_type`/`fiscal_year`/`fiscal_quarter`/`item` で十分なため、現時点でも Recall@k・MRR 等の評価は実行可能。
+- `source.accession_number` と `source.filing_url` は、EDGAR Fetcher 実装（docs_jp/todo.md フェーズ1）に伴い、実際のSEC EDGAR上の値（`accession_number: 0001018724-26-000026`、`filing_url: https://www.sec.gov/Archives/edgar/data/1018724/000101872426000026/amzn-20260630.htm`）に更新済み（2026-10-30）。
 - 現在 16 問。`sec-10q-qa-rag-overview.md` §6.1 の目安（初期 30〜50 問）に対してはまだ少なく、6 種類の質問タイプは最低 1〜2 問ずつ網羅しているのみ。チャンク化・索引化の実装が進んだ段階で、同一データソース内の他の設問（キャッシュフロー、株主資本等）や複数四半期・複数企業のサンプルを追加して拡充する。
 - `period_comparison` の問い（gs-010, gs-011）は増加額・増加率の算出を含む。`sec-10q-qa-rag-overview.md` §7 の方針（数値計算は LLM が誤りやすいため初期版では計算を行わない）とは厳密には矛盾するが、実測では LLM は増加率を独自に計算せず、両期間の数値をそのまま引用する回答が多かった。厳密な採点基準（計算結果の正確性を見るか否か）は faithfulness 等の指標を実装する際に決定する。
 - `gs-002`・`gs-003`・`gs-004` は検索精度の限界により、回答可能なはずの質問が誤って拒否される既知の問題がある（docs_jp/issues.md §10参照）。

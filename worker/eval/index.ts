@@ -1,5 +1,6 @@
 import { runRetrievalEval, type RetrievalEvalResult } from "./retrievalEval.js";
 import { runGenerationEval, type GenerationEvalResult } from "./generationEval.js";
+import { EMBEDDING_MODEL, GENERATION_MODEL } from "../pipeline/models.js";
 
 export { runRetrievalEval, type RetrievalEvalResult };
 export { runGenerationEval, type GenerationEvalResult };
@@ -11,7 +12,7 @@ export async function runAndRecordEval(env: Env, topK?: number): Promise<{ runId
   await env.DB.prepare(`INSERT INTO eval_runs (run_id, config, metrics, details) VALUES (?1, ?2, ?3, ?4)`)
     .bind(
       runId,
-      JSON.stringify({ kind: "retrieval", topK: result.topK, embeddingModel: "@cf/baai/bge-base-en-v1.5", fusionMethod: "rrf" }),
+      JSON.stringify({ kind: "retrieval", topK: result.topK, embeddingModel: EMBEDDING_MODEL, fusionMethod: "rrf" }),
       JSON.stringify({ recallAtK: result.recallAtK, mrr: result.mrr, evaluatedQuestions: result.evaluatedQuestions, totalQuestions: result.totalQuestions }),
       JSON.stringify(result.results),
     )
@@ -27,7 +28,7 @@ export async function runAndRecordGenerationEval(env: Env, topK?: number): Promi
   await env.DB.prepare(`INSERT INTO eval_runs (run_id, config, metrics, details) VALUES (?1, ?2, ?3, ?4)`)
     .bind(
       runId,
-      JSON.stringify({ kind: "generation", generationModel: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" }),
+      JSON.stringify({ kind: "generation", generationModel: GENERATION_MODEL }),
       JSON.stringify({
         refusalAccuracy: result.refusalAccuracy,
         falseRefusalRate: result.falseRefusalRate,

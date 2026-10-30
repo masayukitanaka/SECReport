@@ -1,5 +1,4 @@
-// architect.md §2 Embedding Service。クエリ埋め込みとチャンク埋め込みで同一モデル・同一前処理を使う。
-const EMBEDDING_MODEL = "@cf/baai/bge-base-en-v1.5";
+import { EMBEDDING_MODEL } from "./models.js";
 
 export async function embedTexts(ai: Ai, texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];

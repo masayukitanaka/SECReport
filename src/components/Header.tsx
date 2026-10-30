@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   ChevronDown,
   CircleAlert,
@@ -57,9 +58,15 @@ export function Header() {
   );
 }
 
-// アカウント機能は Auth0 統合までのプレースホルダー（見た目のみ・クリックしても何も起きない）。
-// docs_jp/designs.md 上の「設定」「ログアウト」は本実装では no-op。
+function initials(name: string | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  const chars = parts.length >= 2 ? [parts[0][0], parts[1][0]] : [name[0]];
+  return chars.join("").toUpperCase();
+}
+
 function AccountArea() {
+  const { isAuthenticated, isLoading, user, loginWithRedirect, logout } = useAuth0();
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +87,27 @@ function AccountArea() {
       document.removeEventListener("keydown", onEsc);
     };
   }, [menuOpen]);
+
+  if (isLoading) return null;
+
+  if (!isAuthenticated) {
+    return (
+      <button
+        onClick={() => loginWithRedirect()}
+        style={{
+          padding: "7px 16px",
+          border: "1px solid var(--accent)",
+          borderRadius: 4,
+          color: "var(--accent-deep)",
+          fontSize: 13,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-hover-bg)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        ログイン
+      </button>
+    );
+  }
 
   return (
     <div
@@ -124,11 +152,18 @@ function AccountArea() {
             fontFamily: "var(--font-sans)",
             fontSize: 12,
             fontWeight: 600,
+            overflow: "hidden",
           }}
         >
-          YT
+          {user?.picture ? (
+            <img src={user.picture} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            initials(user?.name)
+          )}
         </span>
-        <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }}>山田 太郎</span>
+        <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }}>
+          {user?.name ?? user?.email}
+        </span>
         <ChevronDown size={13} color="var(--muted)" />
       </button>
 
@@ -160,13 +195,15 @@ function AccountArea() {
               gap: 2,
             }}
           >
-            <span style={{ fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 500 }}>山田 太郎</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)" }}>
-              taro.yamada@example.com
-            </span>
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 500 }}>{user?.name}</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)" }}>{user?.email}</span>
           </div>
           <MenuItem icon={<Settings size={15} color="currentColor" />}>設定</MenuItem>
-          <MenuItem icon={<LogOut size={15} color="currentColor" />} danger>
+          <MenuItem
+            icon={<LogOut size={15} color="currentColor" />}
+            danger
+            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+          >
             ログアウト
           </MenuItem>
         </div>
@@ -204,10 +241,21 @@ function HoverIconButton({
   );
 }
 
-function MenuItem({ icon, danger, children }: { icon: React.ReactNode; danger?: boolean; children: React.ReactNode }) {
+function MenuItem({
+  icon,
+  danger,
+  onClick,
+  children,
+}: {
+  icon: React.ReactNode;
+  danger?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       role="menuitem"
+      onClick={onClick}
       style={{
         display: "flex",
         alignItems: "center",

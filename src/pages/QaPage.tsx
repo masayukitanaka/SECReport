@@ -6,7 +6,7 @@ import { QuestionBox } from "../components/QuestionBox";
 import { AnswerArea, type QaError, type QaStatus } from "../components/AnswerArea";
 
 export function QaPage() {
-  const [filter, setFilter] = useState<FilterState>({ ...EMPTY_FILTER, ticker: "AMZN", formType: "10-Q", fiscalYear: "2026", fiscalQuarter: "Q2" });
+  const [filter, setFilter] = useState<FilterState>({ ...EMPTY_FILTER, formType: "10-Q" });
   const [question, setQuestion] = useState("");
   const [status, setStatus] = useState<QaStatus>("idle");
   const [askedQuestion, setAskedQuestion] = useState("");

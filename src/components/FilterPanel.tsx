@@ -1,4 +1,6 @@
-import type { RetrieverFilter } from "../types/api";
+import { useEffect, useState } from "react";
+import type { IndexedFiling, RetrieverFilter } from "../types/api";
+import { fetchFilings } from "../lib/api";
 import { Tag } from "./Tag";
 
 export type FilterState = {
@@ -38,9 +40,28 @@ const selectStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6 };
 const fieldLabelStyle: React.CSSProperties = { fontSize: 12, color: "var(--muted)" };
 
+function uniqueSorted<T>(values: T[]): T[] {
+  return Array.from(new Set(values)).sort();
+}
+
 export function FilterPanel({ value, onChange }: { value: FilterState; onChange: (f: FilterState) => void }) {
+  const [filings, setFilings] = useState<IndexedFiling[]>([]);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    fetchFilings()
+      .then((res) => setFilings(res.filings))
+      .catch(() => setLoadError(true));
+  }, []);
+
   const set = (key: keyof FilterState) => (e: React.ChangeEvent<HTMLSelectElement>) =>
     onChange({ ...value, [key]: e.target.value });
+
+  const tickers = uniqueSorted(filings.map((f) => f.ticker));
+  const companyNameByTicker = new Map(filings.map((f) => [f.ticker, f.companyName]));
+  const filingsForTicker = value.ticker ? filings.filter((f) => f.ticker === value.ticker) : filings;
+  const years = uniqueSorted(filingsForTicker.map((f) => f.fiscalYear)).sort((a, b) => b - a);
+  const quarters = uniqueSorted(filingsForTicker.map((f) => f.fiscalQuarter).filter((q): q is string => Boolean(q)));
 
   return (
     <aside
@@ -73,7 +94,11 @@ export function FilterPanel({ value, onChange }: { value: FilterState; onChange:
         </span>
         <select value={value.ticker} onChange={set("ticker")} style={selectStyle}>
           <option value="">指定なし（全件）</option>
-          <option value="AMZN">AMZN — Amazon.com, Inc.</option>
+          {tickers.map((ticker) => (
+            <option key={ticker} value={ticker}>
+              {ticker} — {companyNameByTicker.get(ticker) ?? ticker}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -98,20 +123,23 @@ export function FilterPanel({ value, onChange }: { value: FilterState; onChange:
           <span style={fieldLabelStyle}>会計年度</span>
           <select value={value.fiscalYear} onChange={set("fiscalYear")} style={selectStyle}>
             <option value="">—</option>
-            <option value="2026">FY2026</option>
+            {years.map((year) => (
+              <option key={year} value={year}>
+                FY{year}
+              </option>
+            ))}
           </select>
         </label>
         <label style={labelStyle}>
           <span style={fieldLabelStyle}>四半期</span>
           <select value={value.fiscalQuarter} onChange={set("fiscalQuarter")} style={selectStyle}>
             <option value="">—</option>
-            <option value="Q1" disabled>
-              Q1（なし）
-            </option>
-            <option value="Q2">Q2</option>
-            <option value="Q3" disabled>
-              Q3（なし）
-            </option>
+            {(["Q1", "Q2", "Q3"] as const).map((q) => (
+              <option key={q} value={q} disabled={!quarters.includes(q)}>
+                {q}
+                {!quarters.includes(q) ? "（なし）" : ""}
+              </option>
+            ))}
           </select>
         </label>
       </div>
@@ -142,13 +170,27 @@ export function FilterPanel({ value, onChange }: { value: FilterState; onChange:
         <Tag color="teal" style={{ alignSelf: "flex-start" }}>
           収録データ
         </Tag>
-        <span style={{ fontSize: 13, lineHeight: 1.6 }}>
-          Amazon.com, Inc.
-          <br />
-          10-Q · FY2026 Q2 · 1件
-        </span>
+        {loadError ? (
+          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込みに失敗しました。</span>
+        ) : filings.length === 0 ? (
+          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込み中…</span>
+        ) : (
+          <span style={{ fontSize: 13, lineHeight: 1.6 }}>
+            {tickers.map((ticker) => {
+              const rows = filings.filter((f) => f.ticker === ticker);
+              const quartersLabel = rows.map((r) => `${r.formType} · FY${r.fiscalYear}${r.fiscalQuarter ? ` ${r.fiscalQuarter}` : ""}`);
+              return (
+                <span key={ticker} style={{ display: "block", marginBottom: 4 }}>
+                  {companyNameByTicker.get(ticker) ?? ticker}
+                  <br />
+                  {quartersLabel.join(" · ")} · {rows.length}件
+                </span>
+              );
+            })}
+          </span>
+        )}
         <span style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--muted)" }}>
-          企業・四半期は順次追加予定です。現在は選択肢が1つのみです。
+          企業・四半期は順次追加予定です。
         </span>
       </div>
     </aside>

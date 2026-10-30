@@ -1,15 +1,9 @@
 import type { RetrievedChunk } from "./retriever.js";
+import { GENERATION_MODEL, GENERATION_MODEL_MAX_CONTEXT_CHARS } from "./models.js";
 
 // architect.md §2 Answer Generator。初期版は Workers AI のみ対応。
 // 外部 LLM（AI Gateway 経由）は呼び出し先を切り替えるだけで追加できるよう、
 // generateAnswer の戻り値・プロンプト構築は共通化しておく（docs_jp/issues.md 参照）。
-const GENERATION_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-
-// @cf/meta/llama-3.3-70b-instruct-fp8-fast のコンテキストウィンドウは24,000トークン。
-// R-reports ビューア形式のチャンクはテーブルの羅列で情報密度が高く、topK=10件すべてを渡すと
-// 超過することがあった（docs_jp/issues.md 参照）。1文字 ≒ 1トークン未満として安全側に見積もり、
-// プロンプト全体をおおよそこの文字数以内に収める。
-const MAX_CONTEXT_CHARS = 40000;
 
 export interface GeneratedAnswer {
   refused: boolean;
@@ -65,14 +59,14 @@ export async function generateAnswer(env: Env, question: string, retrieved: Retr
   return parseLlmResponse(result);
 }
 
-// スコア上位のチャンクを優先しつつ、合計文字数が MAX_CONTEXT_CHARS を超えないようにチャンクを削る。
+// スコア上位のチャンクを優先しつつ、合計文字数が上限を超えないようにチャンクを削る。
 function buildContext(retrieved: RetrievedChunk[]): string {
   const parts: string[] = [];
   let total = 0;
 
   for (const chunk of retrieved) {
     const part = `[chunk_id: ${chunk.chunkId}] (${chunk.item})\n${chunk.text}`;
-    if (parts.length > 0 && total + part.length > MAX_CONTEXT_CHARS) break;
+    if (parts.length > 0 && total + part.length > GENERATION_MODEL_MAX_CONTEXT_CHARS) break;
     parts.push(part);
     total += part.length;
   }

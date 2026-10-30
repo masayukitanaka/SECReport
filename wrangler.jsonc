@@ -42,6 +42,13 @@
 			"index_name": "secreport-chunks",
 			"remote": true
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "FILINGS_BUCKET",
+			"bucket_name": "secreport-filings",
+			"remote": true
+		}
 	]
 	/**
 	 * Environment Variables

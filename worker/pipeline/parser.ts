@@ -11,14 +11,17 @@ type LinkedomElement = {
 };
 
 /**
- * data/example_forms/amzn-10q-202607.html は SEC EDGAR の R-reports ビューア出力であり、
- * 通常の 10-Q 本文（Item 1〜4 の文章構成）ではなく、XBRL タグに基づく財務諸表・注記の
- * テーブル集合（`id="Report1"`, `id="Report2"`, ... 各1つの <table class="report">）になっている。
- * Item 1A（リスク要因）・Item 2（MD&A）等の文章セクションへの対応は、EDGAR Fetcher が
- * 正式な Form 10-Q 本文を取得するようになった時点で追加する（docs_jp/issues.md 参照）。
+ * data/example_forms/amzn-10q-202607.html（ローカルサンプル）は、SEC EDGAR が実際に配布する
+ * 個別の R-report ファイル（`R1.htm`, `R2.htm`, ...）をブラウザの XBRL Viewer が1画面に
+ * 結合表示したもので、各 `<table class="report">` が `id="Report1"`, `id="Report2"`, ...
+ * というコンテナで囲まれている。オンライン取得時は EDGAR Fetcher（fetcher.ts）が
+ * `FilingSummary.xml` の一覧に従って `RN.htm` を個別に取得するため、本関数（ローカルサンプル用）
+ * とは別に `parseFilingFromReports`（オンライン取得用）を用意する。
  *
- * そのため初期版の item 識別子は、architect.md で例示した「Part I Item 2」のような
- * 10-Q の Item 番号ではなく、各レポートの見出し文字列（例: "Segment Reporting [Abstract]"）を使う。
+ * どちらの経路でも、通常の 10-Q 本文（Item 1〜4 の文章構成）ではなく、XBRL タグに基づく
+ * 財務諸表・注記のテーブル集合を対象とする（Item 1A・Item 2 等の文章セクションへの対応は
+ * 別対応、docs_jp/todo.md B参照）。item 識別子は、architect.md で例示した「Part I Item 2」
+ * のような 10-Q の Item 番号ではなく、各レポートの見出し文字列（例: "Segment Information"）を使う。
  */
 export function parseFiling(html: string): ParsedSection[] {
   const { document } = parseHTML(html) as unknown as { document: LinkedomElement };
@@ -41,6 +44,45 @@ export function parseFiling(html: string): ParsedSection[] {
   }
 
   return sections;
+}
+
+/** EDGAR Fetcher が取得した個別の RN.htm レスポンス。title は FilingSummary.xml の LongName。 */
+export interface RawReport {
+  title: string;
+  html: string;
+}
+
+/**
+ * オンライン取得用の入口。RN.htm は `<DOCUMENT>...<TEXT>...</TEXT></DOCUMENT>` で原本テキストが
+ * 包まれているため、まず `<TEXT>` 内側を取り出してから parseHTML する。
+ */
+export function parseFilingFromReports(reports: RawReport[]): ParsedSection[] {
+  const sections: ParsedSection[] = [];
+
+  for (const report of reports) {
+    const body = extractTextSection(report.html);
+    const { document } = parseHTML(body) as unknown as { document: LinkedomElement };
+    const table = document.querySelector("table.report");
+    if (!table) continue;
+
+    const text = tableToText(table);
+    if (!text.trim()) continue;
+
+    sections.push({
+      item: report.title,
+      text,
+      hasTable: true,
+    });
+  }
+
+  return sections;
+}
+
+// SGML の <DOCUMENT><TEXT>...</TEXT></DOCUMENT> ラッパーを除去し、中身の HTML だけを返す。
+// ラッパーが無い（HTML 本体のみ渡された）場合はそのまま返す。
+function extractTextSection(raw: string): string {
+  const match = raw.match(/<TEXT>([\s\S]*?)<\/TEXT>/i);
+  return match ? match[1] : raw;
 }
 
 function extractTitle(table: LinkedomElement): string | null {

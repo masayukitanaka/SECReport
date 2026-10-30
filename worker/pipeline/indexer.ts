@@ -38,6 +38,51 @@ export async function indexFiling(env: Env, meta: FilingMeta, chunks: Chunk[]): 
   return { filingsWritten: 1, chunksWritten: chunks.length };
 }
 
+// Vectorize の delete API は1リクエストあたり最大100件まで。
+const VECTORIZE_DELETE_BATCH_SIZE = 100;
+
+/** 重複・古い索引データの削除（例：再取り込みや、旧 accession_number 体系からの移行）。 */
+export async function deleteFiling(env: Env, accessionNumber: string): Promise<{ chunksDeleted: number }> {
+  const { results } = await env.DB.prepare(`SELECT chunk_id FROM chunks WHERE accession_number = ?1`)
+    .bind(accessionNumber)
+    .all<{ chunk_id: string }>();
+
+  const chunkIds = results.map((r) => r.chunk_id);
+  for (let i = 0; i < chunkIds.length; i += VECTORIZE_DELETE_BATCH_SIZE) {
+    await env.VECTORIZE.deleteByIds(chunkIds.slice(i, i + VECTORIZE_DELETE_BATCH_SIZE));
+  }
+  if (chunkIds.length > 0) {
+    await env.DB.prepare(`DELETE FROM chunks WHERE accession_number = ?1`).bind(accessionNumber).run();
+  }
+  await env.DB.prepare(`DELETE FROM filings WHERE accession_number = ?1`).bind(accessionNumber).run();
+
+  return { chunksDeleted: chunkIds.length };
+}
+
+export interface IndexedFiling {
+  accessionNumber: string;
+  ticker: string;
+  formType: string;
+  fiscalYear: number;
+  fiscalQuarter: string | null;
+  filingUrl: string;
+  chunkCount: number;
+}
+
+/** UI の企業・四半期絞り込み（FilterPanel）を動的に生成するための、投入済み書類一覧。 */
+export async function listIndexedFilings(env: Env): Promise<IndexedFiling[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT f.accession_number as accessionNumber, f.ticker, f.form_type as formType,
+            f.fiscal_year as fiscalYear, f.fiscal_quarter as fiscalQuarter, f.filing_url as filingUrl,
+            COUNT(c.chunk_id) as chunkCount
+     FROM filings f
+     LEFT JOIN chunks c ON c.accession_number = f.accession_number
+     GROUP BY f.accession_number
+     ORDER BY f.ticker, f.fiscal_year DESC, f.fiscal_quarter DESC`,
+  ).all<IndexedFiling>();
+  return results;
+}
+
 async function upsertFilingMeta(db: D1Database, meta: FilingMeta): Promise<void> {
   await db
     .prepare(

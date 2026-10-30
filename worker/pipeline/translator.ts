@@ -1,8 +1,9 @@
+import { GENERATION_MODEL as TRANSLATION_MODEL } from "./models.js";
+
 // チャンク本体（SEC 10-Q 原文）は英語、質問は日本語という言語のミスマッチがあるため、
 // Embedding・FTS5 キーワード検索の両方の精度を上げるために検索前に質問を英語へ翻訳する
 // （docs_jp/issues.md 参照：翻訳なしでは FTS5 側が機能せず、場当たり的な bigram 分割はノイズを増やして
 // RRF 全体の精度を悪化させた）。
-const TRANSLATION_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 const containsCjk = (text: string): boolean => /[぀-ヿ㐀-鿿＀-￯]/.test(text);
 

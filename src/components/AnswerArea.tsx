@@ -13,10 +13,13 @@ export interface QaError {
   requestId: string;
 }
 
+// evals/golden_set.jsonl（gs-001, gs-006, gs-008）からそのまま採用。
+// 投入済みデータ（Amazon 10-Q、2026年Q2のみ）で実際に動作確認済みの質問文に限定する
+// （デザインモック由来の例文は、言い回しが変わると検索でヒットせず回答が得られないことがあった）。
 const EXAMPLES = [
-  "Amazonの2026年第2四半期の売上高はいくらですか？",
-  "AWSセグメントの営業利益は前年同期と比べてどう変化しましたか？",
-  "来期のAmazonの株価はどうなると思いますか？",
+  "Amazonの2026年第2四半期（Q2、2026年6月30日終了の3ヶ月間）の売上高（Net sales）はいくらですか？",
+  "Amazonの2026年第2四半期における事業セグメント別（North America, International, AWS）の売上高をそれぞれ教えてください。",
+  "Amazonは2026年第2四半期に株主へ配当を支払いましたか？支払った場合、1株当たりの配当額はいくらですか？",
 ];
 
 export function AnswerArea({

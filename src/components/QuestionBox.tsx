@@ -39,7 +39,7 @@ export function QuestionBox({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={loading}
-          placeholder="Amazonの2026年第2四半期の売上高はいくらですか？"
+          placeholder="Amazonの2026年第2四半期（Q2、2026年6月30日終了の3ヶ月間）の売上高（Net sales）はいくらですか？"
           style={{
             font: "inherit",
             fontSize: 15,
