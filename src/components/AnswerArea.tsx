@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import type { AskResponse } from "../types/api";
 import { useElapsed } from "../lib/useElapsed";
 import { Tag } from "./Tag";
@@ -162,11 +163,90 @@ function LoadingState({ startedAt }: { startedAt: number | null }) {
   );
 }
 
+// LLMが回答文中に埋め込む引用マーカー。[#1] は citations[0] を指す（generator.ts の SYSTEM_PROMPT 参照）。
+const CITATION_MARKER_PATTERN = /\[#(\d+)\]/g;
+
+function citationAnchorId(instanceId: string, index: number): string {
+  return `citation-${instanceId}-${index}`;
+}
+
+/** 回答文中の [#N] マーカーを、根拠リストの該当項目へスクロールするボタンに置き換える。 */
+function renderAnswerWithCitationMarkers(answer: string, citationCount: number, instanceId: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  CITATION_MARKER_PATTERN.lastIndex = 0;
+  while ((match = CITATION_MARKER_PATTERN.exec(answer)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(<span key={key++}>{answer.slice(lastIndex, match.index)}</span>);
+    }
+
+    const n = Number(match[1]);
+    const citationIndex = n - 1;
+    if (citationIndex >= 0 && citationIndex < citationCount) {
+      nodes.push(
+        <button
+          key={key++}
+          onClick={() => scrollToCitation(instanceId, citationIndex)}
+          title={`根拠 #${n} を参照`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 20,
+            height: 20,
+            padding: "0 5px",
+            margin: "0 1px",
+            borderRadius: 10,
+            background: "var(--accent)",
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 600,
+            fontFamily: "var(--font-mono)",
+            verticalAlign: "middle",
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-deep)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent)")}
+        >
+          {n}
+        </button>,
+      );
+    } else {
+      // citations の範囲外の番号はマーカーとして機能しないため、プレーンテキストとして表示する。
+      nodes.push(<span key={key++}>{match[0]}</span>);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < answer.length) {
+    nodes.push(<span key={key++}>{answer.slice(lastIndex)}</span>);
+  }
+
+  return nodes;
+}
+
+function scrollToCitation(instanceId: string, index: number) {
+  const el = document.getElementById(citationAnchorId(instanceId, index));
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("citation-highlight");
+  window.setTimeout(() => el.classList.remove("citation-highlight"), 1600);
+}
+
 function AnsweredState({ response }: { response: AskResponse }) {
   const itemByChunkId = new Map(response.retrieved.map((r) => [r.chunkId, r.item]));
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2, 9));
 
   return (
     <article style={{ borderTop: "1px solid var(--border-strong)", paddingTop: 26, display: "flex", flexDirection: "column", gap: 28 }}>
+      <style>{`
+        @keyframes citation-flash { from { background: var(--accent-hover-bg); } to { background: transparent; } }
+        .citation-highlight { animation: citation-flash 1.6s ease-out; border-radius: 4px; }
+      `}</style>
       <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
         <span style={{ flex: "none", width: 56, paddingTop: 6 }}>
           <Tag color="gold" style={{ background: "var(--accent)", color: "#fff", fontWeight: 600 }}>
@@ -183,7 +263,7 @@ function AnsweredState({ response }: { response: AskResponse }) {
             fontFeatureSettings: "'tnum','lnum'",
           }}
         >
-          {response.answer}
+          {response.answer ? renderAnswerWithCitationMarkers(response.answer, response.citations.length, instanceId) : null}
         </p>
       </div>
 
@@ -193,7 +273,11 @@ function AnsweredState({ response }: { response: AskResponse }) {
         </span>
         <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 22, flex: 1, minWidth: 0 }}>
           {response.citations.map((c, i) => (
-            <li key={c.chunkId + i} style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+            <li
+              key={c.chunkId + i}
+              id={citationAnchorId(instanceId, i)}
+              style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, padding: 6, margin: -6 }}
+            >
               <div style={{ display: "flex", alignItems: "baseline", gap: 12, fontSize: 13 }}>
                 <Tag color="gold" style={{ padding: "1px 7px" }}>
                   {i + 1}

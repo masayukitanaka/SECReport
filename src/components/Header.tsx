@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   ChevronDown,
@@ -8,6 +9,9 @@ import {
 } from "./icons";
 
 export function Header() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
+
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg)" }}>
       <div
@@ -35,25 +39,27 @@ export function Header() {
         </div>
       </div>
 
-      <div
-        role="note"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "9px 40px",
-          borderBottom: "1px solid var(--banner-border)",
-          background: "var(--banner-bg)",
-          fontSize: 12.5,
-          lineHeight: 1.6,
-          color: "var(--banner-text)",
-        }}
-      >
-        <CircleAlert size={15} color="var(--accent-deep)" style={{ flex: "none" }} />
-        <span>
-          本サービスは投資助言を目的としたものではありません。表示される内容は SEC への提出書類に基づく情報の抜粋であり、正確性・完全性を保証するものではありません。
-        </span>
-      </div>
+      {!isAdminPage && (
+        <div
+          role="note"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "9px 40px",
+            borderBottom: "1px solid var(--banner-border)",
+            background: "var(--banner-bg)",
+            fontSize: 12.5,
+            lineHeight: 1.6,
+            color: "var(--banner-text)",
+          }}
+        >
+          <CircleAlert size={15} color="var(--accent-deep)" style={{ flex: "none" }} />
+          <span>
+            本サービスは投資助言を目的としたものではありません。表示される内容は SEC への提出書類に基づく情報の抜粋であり、正確性・完全性を保証するものではありません。
+          </span>
+        </div>
+      )}
     </header>
   );
 }

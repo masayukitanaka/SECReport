@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { IndexedFiling, RetrieverFilter } from "../types/api";
 import { fetchFilings } from "../lib/api";
 import { Tag } from "./Tag";
+import { CircleAlert } from "./icons";
 
 export type FilterState = {
   ticker: string;
@@ -157,42 +158,86 @@ export function FilterPanel({ value, onChange }: { value: FilterState; onChange:
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }}>{filterSummary(value)}</span>
       </div>
 
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 4,
-          padding: 14,
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
-      >
-        <Tag color="teal" style={{ alignSelf: "flex-start" }}>
-          収録データ
-        </Tag>
-        {loadError ? (
-          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込みに失敗しました。</span>
-        ) : filings.length === 0 ? (
-          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込み中…</span>
-        ) : (
-          <span style={{ fontSize: 13, lineHeight: 1.6 }}>
-            {tickers.map((ticker) => {
-              const rows = filings.filter((f) => f.ticker === ticker);
-              const quartersLabel = rows.map((r) => `${r.formType} · FY${r.fiscalYear}${r.fiscalQuarter ? ` ${r.fiscalQuarter}` : ""}`);
-              return (
-                <span key={ticker} style={{ display: "block", marginBottom: 4 }}>
-                  {companyNameByTicker.get(ticker) ?? ticker}
-                  <br />
-                  {quartersLabel.join(" · ")} · {rows.length}件
-                </span>
-              );
-            })}
-          </span>
-        )}
-        <span style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--muted)" }}>
-          企業・四半期は順次追加予定です。
-        </span>
-      </div>
+      <CoverageTooltip
+        filings={filings}
+        loadError={loadError}
+        tickers={tickers}
+        companyNameByTicker={companyNameByTicker}
+      />
     </aside>
+  );
+}
+
+function CoverageTooltip({
+  filings,
+  loadError,
+  tickers,
+  companyNameByTicker,
+}: {
+  filings: IndexedFiling[];
+  loadError: boolean;
+  tickers: string[];
+  companyNameByTicker: Map<string, string | null>;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      style={{ position: "relative", alignSelf: "flex-start" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Tag
+        color="teal"
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "default" }}
+      >
+        <CircleAlert size={12} />
+        収録データ
+      </Tag>
+
+      {hovered && (
+        <div
+          role="tooltip"
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 8px)",
+            left: 0,
+            width: 260,
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+            boxShadow: "0 6px 20px rgba(32,31,29,.12)",
+            padding: 14,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            zIndex: 20,
+          }}
+        >
+          {loadError ? (
+            <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込みに失敗しました。</span>
+          ) : filings.length === 0 ? (
+            <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>読み込み中…</span>
+          ) : (
+            <span style={{ fontSize: 13, lineHeight: 1.6 }}>
+              {tickers.map((ticker) => {
+                const rows = filings.filter((f) => f.ticker === ticker);
+                const quartersLabel = rows.map((r) => `${r.formType} · FY${r.fiscalYear}${r.fiscalQuarter ? ` ${r.fiscalQuarter}` : ""}`);
+                return (
+                  <span key={ticker} style={{ display: "block", marginBottom: 4 }}>
+                    {companyNameByTicker.get(ticker) ?? ticker}
+                    <br />
+                    {quartersLabel.join(" · ")} · {rows.length}件
+                  </span>
+                );
+              })}
+            </span>
+          )}
+          <span style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--muted)" }}>
+            企業・四半期は順次追加予定です。
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
