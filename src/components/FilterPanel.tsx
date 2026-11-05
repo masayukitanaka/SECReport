@@ -3,6 +3,7 @@ import type { IndexedFiling, RetrieverFilter } from "../types/api";
 import { fetchFilings } from "../lib/api";
 import { Tag } from "./Tag";
 import { CircleAlert } from "./icons";
+import { QuestionHistoryPanel } from "./QuestionHistoryPanel";
 
 export type FilterState = {
   ticker: string;
@@ -20,11 +21,6 @@ export function filterStateToApi(f: FilterState): RetrieverFilter {
   if (f.fiscalYear) out.fiscalYear = Number(f.fiscalYear);
   if (f.fiscalQuarter) out.fiscalQuarter = f.fiscalQuarter;
   return out;
-}
-
-function filterSummary(f: FilterState): string {
-  const parts = [f.ticker, f.formType, f.fiscalYear && `FY${f.fiscalYear}`, f.fiscalQuarter].filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : "なし（全件検索）";
 }
 
 const selectStyle: React.CSSProperties = {
@@ -145,25 +141,14 @@ export function FilterPanel({ value, onChange }: { value: FilterState; onChange:
         </label>
       </div>
 
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          paddingTop: 18,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
-        <span style={fieldLabelStyle}>送信される絞り込み</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }}>{filterSummary(value)}</span>
-      </div>
-
       <CoverageTooltip
         filings={filings}
         loadError={loadError}
         tickers={tickers}
         companyNameByTicker={companyNameByTicker}
       />
+
+      <QuestionHistoryPanel />
     </aside>
   );
 }

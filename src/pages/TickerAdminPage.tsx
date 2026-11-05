@@ -1,9 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchTickers, addTicker, removeTicker, fetchFilings, fetchIngestJobs, createIngestJob, ApiError } from "../lib/api";
+import {
+  fetchTickers,
+  addTicker,
+  removeTicker,
+  fetchFilings,
+  fetchIngestJobs,
+  createIngestJob,
+  backfillIngest,
+  ApiError,
+} from "../lib/api";
 import type { IndexedFiling, IngestJob, TickerInfo } from "../types/api";
 import { Tag } from "../components/Tag";
 import { Spinner } from "../components/Spinner";
-import { Plus, Trash2, Play } from "../components/icons";
+import { Plus, Trash2, Play, History } from "../components/icons";
 
 const JOB_POLL_INTERVAL_MS = 5000;
 
@@ -27,6 +36,11 @@ export function TickerAdminPage() {
   const [triggeringTicker, setTriggeringTicker] = useState<string | null>(null);
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [backfillTicker, setBackfillTicker] = useState<string | null>(null);
+  const [backfillYear, setBackfillYear] = useState("");
+  const [backfilling, setBackfillingState] = useState(false);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -69,15 +83,15 @@ export function TickerAdminPage() {
     }
   };
 
-  // running のジョブがある間だけポーリングし、完了したら取得済みデータも再読込する。
+  // running/queued のジョブがある間だけポーリングし、完了したら取得済みデータも再読込する。
   useEffect(() => {
     let cancelled = false;
 
     const tick = async () => {
       const latestJobs = await loadJobs();
       if (cancelled) return;
-      const stillRunning = latestJobs.some((j) => j.status === "running");
-      if (stillRunning) {
+      const stillActive = latestJobs.some((j) => j.status === "running" || j.status === "queued");
+      if (stillActive) {
         pollTimer.current = setTimeout(tick, JOB_POLL_INTERVAL_MS);
       } else if (latestJobs.length > 0) {
         await loadFilings();
@@ -125,22 +139,28 @@ export function TickerAdminPage() {
     }
   };
 
+  // 取得実行・遡及取得のどちらでも、ジョブ投入直後に呼ぶ。running/queued のジョブが
+  // なくなるまでポーリングし、完了したら取得済みデータを再読込する。
+  const startJobPolling = () => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollTimer.current = setTimeout(async function tick() {
+      const latestJobs = await loadJobs();
+      const stillActive = latestJobs.some((j) => j.status === "running" || j.status === "queued");
+      if (stillActive) {
+        pollTimer.current = setTimeout(tick, JOB_POLL_INTERVAL_MS);
+      } else if (latestJobs.length > 0) {
+        await loadFilings();
+      }
+    }, JOB_POLL_INTERVAL_MS);
+  };
+
   const handleTriggerIngest = async (ticker: string) => {
     setTriggeringTicker(ticker);
     setTriggerError(null);
     try {
       await createIngestJob(ticker);
       await loadJobs();
-      if (pollTimer.current) clearTimeout(pollTimer.current);
-      pollTimer.current = setTimeout(async function tick() {
-        const latestJobs = await loadJobs();
-        const stillRunning = latestJobs.some((j) => j.status === "running");
-        if (stillRunning) {
-          pollTimer.current = setTimeout(tick, JOB_POLL_INTERVAL_MS);
-        } else if (latestJobs.length > 0) {
-          await loadFilings();
-        }
-      }, JOB_POLL_INTERVAL_MS);
+      startJobPolling();
     } catch (e) {
       const apiError = e instanceof ApiError ? e : new ApiError(String(e), 0);
       setTriggerError(`${ticker}: ${apiError.message}`);
@@ -149,7 +169,34 @@ export function TickerAdminPage() {
     }
   };
 
+  const handleBackfillSubmit = async () => {
+    if (!backfillTicker) return;
+    const year = Number(backfillYear);
+    const currentYear = new Date().getFullYear();
+    if (!Number.isInteger(year) || year < 2001 || year > currentYear) {
+      setBackfillError("西暦年を正しく入力してください（例: 2024）。");
+      return;
+    }
+
+    setBackfillingState(true);
+    setBackfillError(null);
+    try {
+      await backfillIngest(backfillTicker, year);
+      await loadJobs();
+      startJobPolling();
+      setBackfillTicker(null);
+      setBackfillYear("");
+      setTriggerError(null);
+    } catch (e) {
+      const apiError = e instanceof ApiError ? e : new ApiError(String(e), 0);
+      setBackfillError(apiError.message);
+    } finally {
+      setBackfillingState(false);
+    }
+  };
+
   return (
+    <>
     <main style={{ flex: 1, maxWidth: 1320, width: "100%", margin: "0 auto", padding: "40px 40px 72px", display: "flex", flexDirection: "column", gap: 40 }}>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, borderBottom: "1px solid var(--border)", paddingBottom: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -270,12 +317,14 @@ export function TickerAdminPage() {
                 <th style={{ fontWeight: 400, padding: "8px 16px 8px 0", borderBottom: "1px solid var(--border-strong)" }}>企業名</th>
                 <th style={{ fontWeight: 400, padding: "8px 16px 8px 0", borderBottom: "1px solid var(--border-strong)" }}>CIK</th>
                 <th style={{ fontWeight: 400, padding: "8px 16px 8px 0", borderBottom: "1px solid var(--border-strong)" }}>追加日時</th>
-                <th style={{ fontWeight: 400, padding: "8px 0", borderBottom: "1px solid var(--border-strong)", width: 150 }}></th>
+                <th style={{ fontWeight: 400, padding: "8px 0", borderBottom: "1px solid var(--border-strong)", width: 230 }}></th>
               </tr>
             </thead>
             <tbody>
               {tickers.map((t) => {
-                const hasRunningJob = jobs.some((j) => j.ticker === t.ticker && j.status === "running");
+                const hasRunningJob = jobs.some(
+                  (j) => j.ticker === t.ticker && (j.status === "running" || j.status === "queued"),
+                );
                 return (
                   <tr key={t.ticker}>
                     <td style={{ padding: "10px 16px 10px 0", borderBottom: "1px solid var(--border-weak)", fontFamily: "var(--font-mono)", fontWeight: 500 }}>
@@ -309,6 +358,30 @@ export function TickerAdminPage() {
                         >
                           {triggeringTicker === t.ticker || hasRunningJob ? <Spinner size={13} /> : <Play size={13} />}
                           取得実行
+                        </button>
+                        <button
+                          onClick={() => {
+                            setBackfillTicker(t.ticker);
+                            setBackfillYear("");
+                            setBackfillError(null);
+                          }}
+                          disabled={hasRunningJob}
+                          title={`${t.ticker} の過去の10-Qを遡って取得`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "6px 10px",
+                            borderRadius: 4,
+                            color: "var(--accent-deep)",
+                            fontSize: 12,
+                            opacity: hasRunningJob ? 0.45 : 1,
+                          }}
+                          onMouseEnter={(e) => !hasRunningJob && (e.currentTarget.style.background = "var(--accent-hover-bg)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <History size={13} />
+                          遡及取得
                         </button>
                         <button
                           onClick={() => handleRemove(t.ticker)}
@@ -403,8 +476,12 @@ export function TickerAdminPage() {
                     {j.ticker}
                   </td>
                   <td style={{ padding: "8px 16px 8px 0", borderBottom: "1px solid var(--border-weak)" }}>
-                    <Tag color={j.status === "success" ? "green" : j.status === "failed" ? "red" : "blue"}>
-                      {j.status === "success" ? "成功" : j.status === "failed" ? "失敗" : "実行中"}
+                    <Tag
+                      color={
+                        j.status === "success" ? "green" : j.status === "failed" ? "red" : j.status === "queued" ? "gray" : "blue"
+                      }
+                    >
+                      {j.status === "success" ? "成功" : j.status === "failed" ? "失敗" : j.status === "queued" ? "待機中" : "実行中"}
                     </Tag>
                   </td>
                   <td style={{ padding: "8px 16px 8px 0", borderBottom: "1px solid var(--border-weak)", fontFamily: "var(--font-mono)", color: "var(--muted)" }}>
@@ -502,6 +579,122 @@ export function TickerAdminPage() {
         )}
       </section>
     </main>
+
+    {backfillTicker && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(32,31,29,.35)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 100,
+        }}
+        onClick={() => !backfilling && setBackfillTicker(null)}
+      >
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            padding: 28,
+            width: 380,
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            boxShadow: "0 12px 32px rgba(32,31,29,.18)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600 }}>
+              {backfillTicker} の遡及取得
+            </h2>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
+              指定した年以降の未取得の10-Qを、SEC EDGARから古い四半期の順に1件ずつ取得します。
+            </p>
+          </div>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>何年分まで遡るか（西暦年）</span>
+            <input
+              value={backfillYear}
+              onChange={(e) => setBackfillYear(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleBackfillSubmit();
+              }}
+              disabled={backfilling}
+              placeholder="例: 2024"
+              inputMode="numeric"
+              autoFocus
+              style={{
+                font: "inherit",
+                fontSize: 14,
+                padding: "8px 10px",
+                border: "1px solid var(--border-input)",
+                borderRadius: 4,
+                background: "var(--bg)",
+                color: "var(--text)",
+              }}
+            />
+          </label>
+
+          {backfillError && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                border: "1px solid var(--error)",
+                borderRadius: 4,
+                fontSize: 13,
+              }}
+            >
+              <Tag color="red">エラー</Tag>
+              <span>{backfillError}</span>
+            </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button
+              onClick={() => setBackfillTicker(null)}
+              disabled={backfilling}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 4,
+                fontSize: 14,
+                color: "var(--muted)",
+              }}
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={handleBackfillSubmit}
+              disabled={backfilling || !backfillYear.trim()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 18px",
+                border: "1px solid var(--accent)",
+                borderRadius: 4,
+                color: "var(--accent-deep)",
+                fontSize: 14,
+                opacity: backfilling || !backfillYear.trim() ? 0.45 : 1,
+              }}
+            >
+              {backfilling ? <Spinner size={14} /> : <History size={14} />}
+              キューに追加
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

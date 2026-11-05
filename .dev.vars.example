@@ -1,1 +1,5 @@
 SEC_EDGAR_USER_AGENT=YourAppName your-contact@example.com
+# Auth0 API（Resource Server）の設定。バックエンドAPIのJWT検証に使う。
+# Auth0ダッシュボードで Applications > APIs から作成し、Identifier を AUTH0_AUDIENCE に設定する。
+AUTH0_DOMAIN=your-tenant.auth0.com
+AUTH0_AUDIENCE=https://secreport-api

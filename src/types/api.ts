@@ -12,6 +12,7 @@ export interface RetrievedChunkSummary {
   chunkId: string;
   item: string;
   score: number;
+  filingUrl: string;
 }
 
 export interface Citation {
@@ -98,8 +99,8 @@ export interface TickersResponse {
   tickers: TickerInfo[];
 }
 
-// worker/pipeline/ingestJobs.ts IngestJob（暫定の取得トリガーUI、docs_jp/todo.md参照）
-export type IngestJobStatus = "running" | "success" | "failed";
+// worker/pipeline/ingestJobs.ts IngestJob（暫定の取得トリガーUI、docs_jp/tasks.md参照）
+export type IngestJobStatus = "queued" | "running" | "success" | "failed";
 
 export interface IngestJob {
   jobId: string;
@@ -118,4 +119,30 @@ export interface IngestJobsResponse {
 
 export interface CreateIngestJobResponse {
   jobId: string;
+}
+
+// worker/index.ts handleBackfill（遡及取得、docs_jp/tasks.md参照）
+export interface BackfillResponse {
+  queuedJobIds: string[];
+  queuedCount: number;
+}
+
+// worker/pipeline/questionHistory.ts QuestionHistorySummary / QuestionHistoryEntry
+export interface QuestionHistorySummary {
+  id: string;
+  question: string;
+  createdAt: string;
+  refused: boolean;
+}
+
+export interface QuestionHistoryListResponse {
+  items: QuestionHistorySummary[];
+}
+
+export interface QuestionHistoryEntry {
+  id: string;
+  question: string;
+  filterJson: string | null;
+  responseJson: string;
+  createdAt: string;
 }

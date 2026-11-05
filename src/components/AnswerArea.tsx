@@ -15,12 +15,30 @@ export interface QaError {
 }
 
 // evals/golden_set.jsonl（gs-001, gs-006, gs-008）からそのまま採用。
-// 投入済みデータ（Amazon 10-Q、2026年Q2のみ）で実際に動作確認済みの質問文に限定する
-// （デザインモック由来の例文は、言い回しが変わると検索でヒットせず回答が得られないことがあった）。
-const EXAMPLES = [
-  "Amazonの2026年第2四半期（Q2、2026年6月30日終了の3ヶ月間）の売上高（Net sales）はいくらですか？",
-  "Amazonの2026年第2四半期における事業セグメント別（North America, International, AWS）の売上高をそれぞれ教えてください。",
-  "Amazonは2026年第2四半期に株主へ配当を支払いましたか？支払った場合、1株当たりの配当額はいくらですか？",
+// 動作確認済みの質問文に限定する（デザインモック由来の例文は、言い回しが変わると検索でヒットせず
+// 回答が得られないことがあった）。今はAMZN以外（GOOGL/META）のデータも同一インデックスに投入済みのため、
+// フィルタ未指定のまま質問すると他社データが混入して誤回答になる事故が実際に発生した
+// （docs_jp/tasks.md 参照）。質問例は必ず対応する企業・期間のフィルタとセットでクリックさせる。
+export interface ExampleFilter {
+  ticker: string;
+  formType: string;
+  fiscalYear: string;
+  fiscalQuarter: string;
+}
+
+const EXAMPLES: { text: string; filter: ExampleFilter }[] = [
+  {
+    text: "Amazonの2026年第2四半期（Q2、2026年6月30日終了の3ヶ月間）の売上高（Net sales）はいくらですか？",
+    filter: { ticker: "AMZN", formType: "10-Q", fiscalYear: "2026", fiscalQuarter: "Q2" },
+  },
+  {
+    text: "Amazonの2026年第2四半期における事業セグメント別（North America, International, AWS）の売上高をそれぞれ教えてください。",
+    filter: { ticker: "AMZN", formType: "10-Q", fiscalYear: "2026", fiscalQuarter: "Q2" },
+  },
+  {
+    text: "Amazonは2026年第2四半期に株主へ配当を支払いましたか？支払った場合、1株当たりの配当額はいくらですか？",
+    filter: { ticker: "AMZN", formType: "10-Q", fiscalYear: "2026", fiscalQuarter: "Q2" },
+  },
 ];
 
 export function AnswerArea({
@@ -38,7 +56,7 @@ export function AnswerArea({
   response: AskResponse | null;
   error: QaError | null;
   onRetry: () => void;
-  onExampleClick: (text: string) => void;
+  onExampleClick: (text: string, filter: ExampleFilter) => void;
 }) {
   const [retrievedOpen, setRetrievedOpen] = useState(false);
 
@@ -64,7 +82,7 @@ export function AnswerArea({
   );
 }
 
-function IdleState({ onExampleClick }: { onExampleClick: (text: string) => void }) {
+function IdleState({ onExampleClick }: { onExampleClick: (text: string, filter: ExampleFilter) => void }) {
   return (
     <div style={{ borderTop: "1px solid var(--border)", padding: "48px 0", display: "flex", flexDirection: "column", gap: 18 }}>
       <p style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: 22, fontStyle: "italic", color: "var(--muted)" }}>
@@ -74,10 +92,10 @@ function IdleState({ onExampleClick }: { onExampleClick: (text: string) => void 
         <Tag color="gray" style={{ alignSelf: "flex-start", marginBottom: 6 }}>
           質問の例
         </Tag>
-        {EXAMPLES.map((text) => (
+        {EXAMPLES.map(({ text, filter }) => (
           <button
             key={text}
-            onClick={() => onExampleClick(text)}
+            onClick={() => onExampleClick(text, filter)}
             style={{
               padding: "10px 0",
               borderBottom: "1px solid var(--border-weak)",
@@ -239,6 +257,7 @@ function scrollToCitation(instanceId: string, index: number) {
 
 function AnsweredState({ response }: { response: AskResponse }) {
   const itemByChunkId = new Map(response.retrieved.map((r) => [r.chunkId, r.item]));
+  const filingUrlByChunkId = new Map(response.retrieved.map((r) => [r.chunkId, r.filingUrl]));
   const [instanceId] = useState(() => Math.random().toString(36).slice(2, 9));
 
   return (
@@ -284,21 +303,44 @@ function AnsweredState({ response }: { response: AskResponse }) {
                 </Tag>
                 <span style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}>{itemByChunkId.get(c.chunkId) ?? "—"}</span>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)" }}>{c.chunkId}</span>
-                <span
-                  title="SEC原本へのリンク（filing_url 接続後に有効化）"
-                  style={{
-                    marginLeft: "auto",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "var(--disabled)",
-                    cursor: "not-allowed",
-                  }}
-                >
-                  SEC原本
-                  <ExternalLink size={13} />
-                </span>
+                {filingUrlByChunkId.get(c.chunkId) ? (
+                  <a
+                    href={filingUrlByChunkId.get(c.chunkId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="この引用元の提出書類（SEC EDGAR原本）を新しいタブで開く"
+                    style={{
+                      marginLeft: "auto",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "var(--accent-deep)",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--accent-deep)")}
+                  >
+                    SEC原本
+                    <ExternalLink size={13} />
+                  </a>
+                ) : (
+                  <span
+                    title="SEC原本の原本URLが取得できませんでした"
+                    style={{
+                      marginLeft: "auto",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "var(--disabled)",
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    SEC原本
+                    <ExternalLink size={13} />
+                  </span>
+                )}
               </div>
               <blockquote
                 lang="en"

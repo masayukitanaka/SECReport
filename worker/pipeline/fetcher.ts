@@ -21,7 +21,7 @@ export interface FetchedFiling {
   rawFiles: { key: string; body: string }[];
 }
 
-function padCik(cik: string): string {
+export function padCik(cik: string): string {
   return cik.replace(/\D/g, "").padStart(10, "0");
 }
 
@@ -69,12 +69,12 @@ export function inferFiscalQuarter(reportDate: string): { fiscalYear: number; fi
   return { fiscalYear: year, fiscalQuarter: null };
 }
 
-interface FilingSummaryEntry {
+export interface FilingSummaryEntry {
   htmlFileName: string;
   shortName: string;
 }
 
-function parseFilingSummary(xml: string): FilingSummaryEntry[] {
+export function parseFilingSummary(xml: string): FilingSummaryEntry[] {
   const entries: FilingSummaryEntry[] = [];
   const reportBlocks = xml.matchAll(/<Report\b[^>]*>([\s\S]*?)<\/Report>/g);
   for (const block of reportBlocks) {
@@ -99,7 +99,7 @@ function decodeXmlEntities(text: string): string {
 
 /**
  * 1件の提出書類（accession_number）を取得する。FilingSummary.xml でレポート一覧を取得し、
- * 各 RN.htm を個別に fetch する（docs_jp/todo.md フェーズ1参照）。
+ * 各 RN.htm を個別に fetch する（docs_jp/tasks.md参照）。
  */
 export async function fetchFiling(
   cik: string,

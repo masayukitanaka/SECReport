@@ -20,7 +20,7 @@ type LinkedomElement = {
  *
  * どちらの経路でも、通常の 10-Q 本文（Item 1〜4 の文章構成）ではなく、XBRL タグに基づく
  * 財務諸表・注記のテーブル集合を対象とする（Item 1A・Item 2 等の文章セクションへの対応は
- * 別対応、docs_jp/todo.md B参照）。item 識別子は、architect.md で例示した「Part I Item 2」
+ * 別対応、docs_jp/tasks.md参照）。item 識別子は、architect.md で例示した「Part I Item 2」
  * のような 10-Q の Item 番号ではなく、各レポートの見出し文字列（例: "Segment Information"）を使う。
  */
 export function parseFiling(html: string): ParsedSection[] {

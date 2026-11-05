@@ -15,6 +15,15 @@
 	},
 	"upload_source_maps": true,
 	/**
+	 * Cron Triggers: 資料の自動取り込み（ポーリング、docs_jp/tasks.md P2-A参照）。
+	 * UTC 03:00（JST 12:00）に1日1回、登録済みティッカー全件の最新10-Qを確認・取得する。
+	 * SEC EDGARの提出頻度（四半期ごと）に対して十分な頻度であり、過度な負荷をかけない。
+	 * スケジュールを変更する場合はこの値を編集して再デプロイすること（Cronの設定はこのファイルが正）。
+	 */
+	"triggers": {
+		"crons": ["0 3 * * *"]
+	},
+	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 	 */
@@ -48,6 +57,18 @@
 			"binding": "FILINGS_BUCKET",
 			"bucket_name": "secreport-filings",
 			"remote": true
+		}
+	],
+	/**
+	 * Workflows: EDGAR Fetcher〜索引化のWorkflow化（docs_jp/tasks.md P2-B参照）。
+	 * 失敗時に最初からやり直す waitUntil ベースの暫定実装から、各ステップ単位で
+	 * リトライ・再開できる Cloudflare Workflows に移行した。
+	 */
+	"workflows": [
+		{
+			"name": "ingest-filing-workflow",
+			"binding": "INGEST_FILING_WORKFLOW",
+			"class_name": "IngestFilingWorkflow"
 		}
 	]
 	/**

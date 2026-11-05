@@ -24,7 +24,7 @@ export interface GenerationEvalResult {
 
 const TOP_K = 10;
 
-/** architect.md §2 Eval Runner（生成・拒否評価）。LLM 自己判断主体の拒否判定（docs_jp/issues.md 参照）が
+/** architect.md §2 Eval Runner（生成・拒否評価）。LLM 自己判断主体の拒否判定（docs_jp/tasks.md 参照）が
  * ゴールデンセットの質問タイプ通りに機能しているかを測る。faithfulness・answer relevancy・引用正確性は未実装。 */
 export async function runGenerationEval(env: Env, topK: number = TOP_K): Promise<GenerationEvalResult> {
   const questions = loadGoldenSet();

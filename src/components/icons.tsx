@@ -138,3 +138,13 @@ export function Plus(props: IconProps) {
     </Icon>
   );
 }
+
+export function History(props: IconProps) {
+  return (
+    <Icon {...props} strokeWidth={1.6}>
+      <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </Icon>
+  );
+}

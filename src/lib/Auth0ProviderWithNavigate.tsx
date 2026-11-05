@@ -9,6 +9,10 @@ export function Auth0ProviderWithNavigate({ children }: { children: ReactNode })
 
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+  // バックエンドAPIのJWT検証（docs_jp/tasks.md P0参照）で使うaudience。Auth0ダッシュボードで
+  // 作成したAPI（Resource Server）のIdentifierと、Workers側のAUTH0_AUDIENCEに合わせる。
+  const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+  const scope = import.meta.env.VITE_AUTH0_SCOPE;
 
   const onRedirectCallback = (appState?: AppState) => {
     navigate(appState?.returnTo ?? "/dashboard");
@@ -20,6 +24,8 @@ export function Auth0ProviderWithNavigate({ children }: { children: ReactNode })
       clientId={clientId}
       authorizationParams={{
         redirect_uri: window.location.origin,
+        audience,
+        scope,
       }}
       onRedirectCallback={onRedirectCallback}
     >

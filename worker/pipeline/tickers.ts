@@ -1,4 +1,4 @@
-// 対象ティッカー管理（docs_jp/todo.md フェーズ3の先、/admin/ticker から追加・削除）。
+// 対象ティッカー管理（docs_jp/tasks.md参照、/admin/ticker から追加・削除）。
 // D1 の tickers テーブルで管理する。追加時は SEC EDGAR の company_tickers.json から
 // CIK・企業名を自動解決する（ユーザーはティッカー文字列を入力するだけでよい）。
 import { secEdgarFetch } from "./secEdgarFetch.js";
@@ -38,7 +38,7 @@ interface SecCompanyTickerEntry {
 }
 
 // company_tickers.json（約780KB・全上場企業分）への SEC EDGAR 側の 403 が、通常の EDGAR
-// アクセス（FilingSummary.xml・RN.htm 等）より頻発する事例を確認した（issues.md §16参照）。
+// アクセス（FilingSummary.xml・RN.htm 等）より頻発する事例を確認した（docs_jp/tasks.md参照）。
 // 毎回フルダウンロードする代わりに R2 にキャッシュし、有効期限内は SEC EDGAR への再取得を避ける。
 const TICKER_CACHE_KEY = "_cache/company_tickers.json";
 const TICKER_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24時間

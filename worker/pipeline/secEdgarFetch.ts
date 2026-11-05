@@ -2,24 +2,24 @@
 // リトライは exponential backoff）に従う。EDGAR Fetcher（fetcher.ts）・ティッカー解決（tickers.ts）の
 // 両方から使う。
 const MAX_REQUESTS_PER_SECOND = 8; // SEC上限10 req/secに安全マージンを確保
-const MIN_REQUEST_INTERVAL_MS = Math.ceil(1000 / MAX_REQUESTS_PER_SECOND);
+export const MIN_REQUEST_INTERVAL_MS = Math.ceil(1000 / MAX_REQUESTS_PER_SECOND);
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 500;
 
-// 403 はボット対策等による一時的な拒否のことがある（issues.md 参照：Cloudflare Workers の IP が
+// 403 はボット対策等による一時的な拒否のことがある（docs_jp/tasks.md参照：Cloudflare Workers の IP が
 // 一時的に弾かれたと見られる事例を確認）。恒久的な拒否（User-Agent不正等）の可能性もあるため、
 // 429/5xx と同列の無制限リトライではなく、403のみ少ない回数（2回）で区切って様子を見る。
 const MAX_403_RETRIES = 2;
 
 let lastRequestAt = 0;
 
-export async function secEdgarFetch(url: string, userAgent: string): Promise<Response> {
-  const wait = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
-  if (wait > 0) {
-    await new Promise((resolve) => setTimeout(resolve, wait));
-  }
-  lastRequestAt = Date.now();
-
+/**
+ * SEC EDGARへのリトライ付きfetch（レート制限は呼び出し元の責務）。
+ * 通常の同期処理ではモジュール変数でレート制限できるが、Cloudflare Workflowsのstepは
+ * 休止・再起動によりメモリ内状態を保持しない可能性があるため、Workflow内（ingestWorkflow.ts）
+ * からはこちらを直接使い、レート制限は`step.sleep`で明示的に行う（docs_jp/tasks.md P2-B参照）。
+ */
+export async function secEdgarFetchWithRetry(url: string, userAgent: string): Promise<Response> {
   let lastError: unknown;
   let forbiddenCount = 0;
 
@@ -52,4 +52,14 @@ export async function secEdgarFetch(url: string, userAgent: string): Promise<Res
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+/** 通常の同期処理（Workflow外）向け。モジュール内のタイマーでレート制限してからfetchする。 */
+export async function secEdgarFetch(url: string, userAgent: string): Promise<Response> {
+  const wait = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
+  if (wait > 0) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
+  lastRequestAt = Date.now();
+  return secEdgarFetchWithRetry(url, userAgent);
 }

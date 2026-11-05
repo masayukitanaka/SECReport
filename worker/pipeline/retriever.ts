@@ -4,9 +4,13 @@ import { translateToEnglishIfNeeded } from "./translator.js";
 export interface RetrievedChunk {
   chunkId: string;
   accessionNumber: string;
+  ticker: string;
+  fiscalYear: number;
+  fiscalQuarter: string | null;
   item: string;
   text: string;
   score: number;
+  filingUrl: string;
 }
 
 export interface RetrieverFilter {
@@ -23,7 +27,7 @@ const RRF_K = 60;
 
 /** Vectorize（密ベクトル）と D1 FTS5（キーワード）の結果を RRF で統合する（architect.md §2 Hybrid Retriever）。 */
 export async function hybridSearch(env: Env, query: string, topK: number, filter?: RetrieverFilter): Promise<RetrievedChunk[]> {
-  // チャンク本体（英語）とのマッチ精度を上げるため、検索前に質問を英語化する（docs_jp/issues.md 参照）。
+  // チャンク本体（英語）とのマッチ精度を上げるため、検索前に質問を英語化する（docs_jp/tasks.md 参照）。
   const searchQuery = await translateToEnglishIfNeeded(env.AI, query);
 
   const [vectorRanked, keywordRanked] = await Promise.all([
@@ -32,7 +36,10 @@ export async function hybridSearch(env: Env, query: string, topK: number, filter
   ]);
 
   const rrfScore = new Map<string, number>();
-  const chunkInfo = new Map<string, { accessionNumber: string; item: string; text: string }>();
+  const chunkInfo = new Map<
+    string,
+    { accessionNumber: string; ticker: string; fiscalYear: number; fiscalQuarter: string | null; item: string; text: string; filingUrl: string }
+  >();
 
   for (const [rank, row] of vectorRanked.entries()) {
     rrfScore.set(row.chunkId, (rrfScore.get(row.chunkId) ?? 0) + 1 / (RRF_K + rank + 1));
@@ -56,8 +63,12 @@ export async function hybridSearch(env: Env, query: string, topK: number, filter
 interface RankedRow {
   chunkId: string;
   accessionNumber: string;
+  ticker: string;
+  fiscalYear: number;
+  fiscalQuarter: string | null;
   item: string;
   text: string;
+  filingUrl: string;
 }
 
 async function vectorSearch(env: Env, query: string, filter?: RetrieverFilter): Promise<RankedRow[]> {
@@ -104,7 +115,8 @@ async function keywordSearch(env: Env, query: string, filter?: RetrieverFilter):
   const whereClause = conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
 
   const { results } = await env.DB.prepare(
-    `SELECT c.chunk_id as chunkId, c.accession_number as accessionNumber, c.item as item, c.text as text
+    `SELECT c.chunk_id as chunkId, c.accession_number as accessionNumber, c.item as item, c.text as text,
+            f.filing_url as filingUrl, f.ticker as ticker, f.fiscal_year as fiscalYear, f.fiscal_quarter as fiscalQuarter
      FROM chunks_fts
      JOIN chunks c ON c.rowid = chunks_fts.rowid
      JOIN filings f ON f.accession_number = c.accession_number
@@ -123,8 +135,11 @@ async function fetchChunksByIds(db: D1Database, ids: string[]): Promise<Map<stri
   const placeholders = ids.map(() => "?").join(",");
   const { results } = await db
     .prepare(
-      `SELECT chunk_id as chunkId, accession_number as accessionNumber, item, text
-       FROM chunks WHERE chunk_id IN (${placeholders})`,
+      `SELECT c.chunk_id as chunkId, c.accession_number as accessionNumber, c.item as item, c.text as text,
+              f.filing_url as filingUrl, f.ticker as ticker, f.fiscal_year as fiscalYear, f.fiscal_quarter as fiscalQuarter
+       FROM chunks c
+       JOIN filings f ON f.accession_number = c.accession_number
+       WHERE c.chunk_id IN (${placeholders})`,
     )
     .bind(...ids)
     .all<RankedRow>();
@@ -144,7 +159,7 @@ function buildVectorizeFilter(filter?: RetrieverFilter): VectorizeVectorMetadata
 // FTS5 の MATCH 構文で特別な意味を持つ記号を除去し、質問文の単語をそのまま OR 検索できるようにする。
 // チャンク本体は英語の財務諸表原文のため、質問文（日本語）から拾えるのは主に英数字トークン（企業名・数値等）。
 // 日本語は単語境界が無く空白区切りでは分割できないため（CJK文字列全体が1トークンになり誤って0件化する
-// 不具合があった。docs_jp/issues.md 参照）、CJK連続文字列は2文字の重複 bigram に分割してから OR 結合する。
+// 不具合があった。docs_jp/tasks.md 参照）、CJK連続文字列は2文字の重複 bigram に分割してから OR 結合する。
 function sanitizeFtsQuery(query: string): string {
   const tokens: string[] = [];
   const asciiOrNumberRun = /[\p{Script=Latin}\p{N}]+/gu;

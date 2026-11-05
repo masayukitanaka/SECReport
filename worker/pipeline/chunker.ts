@@ -1,7 +1,7 @@
 import type { Chunk, ParsedSection } from "./types.js";
 
 // architect.md §6.1: 初期版はチャンクサイズを固定長で決め打ちにする。
-// チャンクサイズ違いによる検索結果の比較ツールは後日実装（docs_jp/issues.md 参照）。
+// チャンクサイズ違いによる検索結果の比較ツールは後日実装（docs_jp/tasks.md 参照）。
 const CHUNK_SIZE_CHARS = 1500;
 const CHUNK_OVERLAP_CHARS = 150;
 
